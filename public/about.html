@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem("sb-theme")||"dark"}catch(e){document.documentElement.dataset.theme="dark"}</script>
+  <title>About Us</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <section class="page-hero">
+    <div class="wrap">
+      <h1>About <span data-s="studio_name"></span></h1>
+      <p data-s="tagline"></p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap about-grid">
+      <div>
+        <h2 id="aboutTitle"></h2>
+        <div class="about-text" id="aboutText"></div>
+        <div style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap">
+          <a href="book.html" class="btn btn-primary btn-lg">Book Your Slot</a>
+          <a href="gallery.html" class="btn btn-outline btn-lg">See the Studio</a>
+        </div>
+      </div>
+      <div class="info-card">
+        <h3>Visit us</h3>
+        <div class="row">📍 <span data-s="address"></span></div>
+        <div class="row">📞 <a data-tel><span data-s="phone"></span></a></div>
+        <div class="row">✉️ <a data-mail><span data-s="email"></span></a></div>
+        <div class="row" id="timings"></div>
+        <a data-link="map_link" target="_blank" rel="noopener" class="btn btn-ghost btn-block" style="margin-top:10px">🗺️ Get directions</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section white">
+    <div class="wrap">
+      <div class="section-head"><h2>Studio Attractions</h2></div>
+      <div class="attr-grid" id="attractions"></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head"><h2>Perfect for</h2></div>
+      <div class="poster-row" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
+        <div class="attr"><div class="ico">🎸</div><h4>Band Rehearsals</h4><p>Tighten your set before the big gig.</p></div>
+        <div class="attr"><div class="ico">🎶</div><h4>Jamming Sessions</h4><p>Meet up, plug in and play whatever you feel.</p></div>
+        <div class="attr"><div class="ico">🤝</div><h4>Music Meets</h4><p>Community meet-ups, open mics and workshops.</p></div>
+        <div class="attr"><div class="ico">🎂</div><h4>Celebrations</h4><p>Birthdays and private parties with live music.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <footer id="site-footer"></footer>
+  <a href="book.html" class="btn btn-primary fab">🎸 Book Your Slot</a>
+
+  <script src="js/common.js"></script>
+  <script>
+    App.renderChrome('about');
+    App.settings().then((s) => {
+      document.getElementById('aboutTitle').textContent = s.about_title || '';
+      document.getElementById('aboutText').textContent = s.about_text || '';
+      document.getElementById('timings').innerHTML =
+        `🕘 <span>${App.esc(s.first_half_label)}: ${App.esc(s.first_half_time)}<br>${App.esc(s.second_half_label)}: ${App.esc(s.second_half_time)}</span>`;
+      let list = [];
+      try { list = JSON.parse(s.attractions || '[]'); } catch {}
+      document.getElementById('attractions').innerHTML = list.map((a) => `
+        <div class="attr"><div class="ico">${App.esc(a.icon)}</div><h4>${App.esc(a.title)}</h4><p>${App.esc(a.text)}</p></div>`).join('');
+    });
+  </script>
+</body>
+</html>

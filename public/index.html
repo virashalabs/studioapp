@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem("sb-theme")||"dark"}catch(e){document.documentElement.dataset.theme="dark"}</script>
+  <title>Home</title>
+  <meta name="description" content="Book rehearsal studio slots for your band, jam session, music meet or celebration – half day or full day.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <!-- Promotional banners -->
+  <section class="hero">
+    <div class="wrap">
+      <div class="carousel" id="carousel">
+        <div class="carousel-track" id="track"></div>
+        <button class="carousel-btn prev" aria-label="Previous">‹</button>
+        <button class="carousel-btn next" aria-label="Next">›</button>
+      </div>
+      <div class="dots" id="dots"></div>
+    </div>
+  </section>
+
+  <!-- Book your slot -->
+  <section class="section" style="padding-bottom:10px">
+    <div class="wrap">
+      <div class="book-strip">
+        <div class="icon">🎤</div>
+        <div>
+          <h3>Book your slot now</h3>
+          <p>Pick a date, choose first half, second half or the full day – and you're on.</p>
+        </div>
+        <a href="book.html" class="btn btn-primary btn-lg">Book Your Slot →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slot pricing -->
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head"><h2>Choose your session</h2><a href="book.html">See availability ›</a></div>
+      <div class="slot-cards" id="slotCards"></div>
+    </div>
+  </section>
+
+  <!-- Upcoming jams -->
+  <section class="section white" id="events">
+    <div class="wrap">
+      <div class="section-head"><h2>Upcoming Jamming Sessions</h2><a href="book.html">Book your own ›</a></div>
+      <div class="poster-row" id="posters"></div>
+    </div>
+  </section>
+
+  <!-- Gallery preview -->
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head"><h2>Inside the Studio</h2><a href="gallery.html">View full gallery ›</a></div>
+      <div class="gallery-grid" id="galleryPreview"></div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="section white" id="reviews">
+    <div class="wrap">
+      <div class="section-head"><h2>Voice of Our Customers</h2><a href="#" id="writeReview">Write a review ›</a></div>
+      <div class="testi-grid" id="testimonials"></div>
+    </div>
+  </section>
+
+  <footer id="site-footer"></footer>
+  <a href="book.html" class="btn btn-primary fab">🎸 Book Your Slot</a>
+
+  <script src="js/common.js"></script>
+  <script src="js/home.js"></script>
+</body>
+</html>

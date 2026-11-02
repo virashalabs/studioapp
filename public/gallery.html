@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem("sb-theme")||"dark"}catch(e){document.documentElement.dataset.theme="dark"}</script>
+  <title>Gallery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <section class="page-hero">
+    <div class="wrap">
+      <h1>Gallery</h1>
+      <p>A look inside the room – and the music made here.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="chip-row" id="galleryTabs" role="tablist" aria-label="Gallery sections"></div>
+      <div id="gallery"></div>
+    </div>
+  </section>
+
+  <footer id="site-footer"></footer>
+  <a href="book.html" class="btn btn-primary fab">🎸 Book Your Slot</a>
+
+  <script src="js/common.js"></script>
+  <script>
+    App.renderChrome('gallery');
+    Promise.all([App.api('api/gallery'), App.settings()]).then(([items, s]) => {
+      const el = document.getElementById('gallery');
+      const tabs = document.getElementById('galleryTabs');
+      const cats = App.galleryCategories(s, items);
+      let active = decodeURIComponent(location.hash.slice(1)) || 'All';
+      if (active !== 'All' && !cats.includes(active)) active = 'All';
+
+      const tile = (g, i) => `<div class="gallery-item" data-i="${i}" style="background-image:url('${App.esc(App.thumb(g.image))}')"><span>${App.esc(g.caption || '')}</span></div>`;
+      const draw = () => {
+        tabs.innerHTML = ['All', ...cats].map((c) => {
+          const n = c === 'All' ? items.length : items.filter((g) => g.category === c).length;
+          return `<button role="tab" class="chip ${c === active ? 'on' : ''}" data-cat="${App.esc(c)}">${App.esc(c)} <small>${n}</small></button>`;
+        }).join('');
+        // "All" shows every section under its own heading; a single section shows just its photos.
+        const shown = (active === 'All' ? cats : [active]).filter((c) => items.some((g) => g.category === c));
+        el.innerHTML = shown.map((c) => `
+          <div class="gallery-section">
+            <div class="section-head"><h2>${App.esc(c)}</h2><span class="muted">${items.filter((g) => g.category === c).length} photos</span></div>
+            <div class="gallery-grid">${items.map((g, i) => (g.category === c ? tile(g, i) : '')).join('')}</div>
+          </div>`).join('') || '<p class="muted">Photos coming soon.</p>';
+      };
+      draw();
+      tabs.onclick = (e) => {
+        const b = e.target.closest('[data-cat]');
+        if (!b) return;
+        active = b.dataset.cat;
+        history.replaceState(null, '', active === 'All' ? location.pathname : '#' + encodeURIComponent(active));
+        draw();
+      };
+      el.onclick = (e) => {
+        const it = e.target.closest('.gallery-item');
+        if (!it) return;
+        const g = items[Number(it.dataset.i)];
+        const group = items.filter((x) => x.category === g.category);
+        App.lightbox(group, group.indexOf(g));
+      };
+    });
+  </script>
+</body>
+</html>

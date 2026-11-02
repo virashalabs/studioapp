@@ -1,0 +1,31 @@
+# Render Blueprint: free web service for the demo.
+# Note: the free plan's disk is wiped on every deploy/restart, so the site resets
+# to the demo content in seed/studio.db (bookings made on the live site are lost).
+services:
+  - type: web
+    name: studio-booking
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "24.15.0"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem("sb-theme")||"dark"}catch(e){document.documentElement.dataset.theme="dark"}</script>
+  <title>Book Your Slot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="steps"><div class="wrap">
+    <div class="step on" data-step="1"><i>1</i> Date &amp; Slot</div>
+    <div class="step" data-step="2"><i>2</i> Your Details</div>
+    <div class="step" data-step="3"><i>3</i> Confirmation</div>
+  </div></div>
+
+  <main class="wrap book-layout" id="bookLayout">
+    <div>
+      <!-- Step 1: date & slot -->
+      <section id="step1">
+        <div class="panel">
+          <h3>Pick a date</h3>
+          <div class="date-strip" id="dateStrip"></div>
+          <div class="cal-head">
+            <h3 id="calTitle"></h3>
+            <div class="cal-nav">
+              <button id="prevMonth" aria-label="Previous month">‹</button>
+              <button id="nextMonth" aria-label="Next month">›</button>
+            </div>
+          </div>
+          <div class="cal-grid" id="calendar"></div>
+          <div class="legend">
+            <span><i class="lg-avail"></i> Available</span>
+            <span><i class="lg-first"></i> First half booked</span>
+            <span><i class="lg-second"></i> Second half booked</span>
+            <span><i class="lg-full"></i> Full day booked</span>
+            <span><i class="lg-past"></i> Not available</span>
+          </div>
+        </div>
+
+        <div class="panel" id="slotPanel">
+          <h3 id="slotTitle">Choose a slot</h3>
+          <p class="muted" id="slotHint">Select a date in the calendar to see open slots.</p>
+          <div class="slot-pills" id="slotPills"></div>
+        </div>
+      </section>
+
+      <!-- Step 2: details form -->
+      <section id="step2" class="hidden">
+        <form class="panel" id="bookingForm" novalidate>
+          <h3>Tell us about your group</h3>
+          <div id="formError" class="alert alert-error hidden"></div>
+          <div class="form-grid">
+            <div class="field full">
+              <label>You are booking as <span class="req">*</span></label>
+              <div class="seg">
+                <label><input type="radio" name="group_type" value="Band" checked> 🎸 Band</label>
+                <label><input type="radio" name="group_type" value="Individual"> 🎤 Individual</label>
+                <label><input type="radio" name="group_type" value="Group"> 👥 Group</label>
+              </div>
+            </div>
+            <div class="field full">
+              <label for="f-name" id="nameLabel">Name of Band <span class="req">*</span></label>
+              <input id="f-name" name="name" required maxlength="100" autocomplete="organization">
+            </div>
+            <div class="field">
+              <label for="f-phone">Contact number <span class="req">*</span></label>
+              <input id="f-phone" name="phone" type="tel" required maxlength="20" placeholder="+91 98xxxxxxxx" autocomplete="tel">
+            </div>
+            <div class="field">
+              <label for="f-email">Email address <span class="req">*</span></label>
+              <input id="f-email" name="email" type="email" required maxlength="120" placeholder="Confirmation will be sent here" autocomplete="email">
+            </div>
+            <div class="field">
+              <label for="f-event">Purpose</label>
+              <select id="f-event" name="event_type">
+                <option>Jamming Session</option>
+                <option>Band Rehearsal</option>
+                <option>Music Meet</option>
+                <option>Celebration / Party</option>
+                <option>Workshop / Class</option>
+                <option>Recording</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="f-att">Number of people</label>
+              <input id="f-att" name="attendees" type="number" min="1" max="100" placeholder="e.g. 5">
+            </div>
+            <div class="field full">
+              <label for="f-notes">Anything we should know? (gear, setup, special requests)</label>
+              <textarea id="f-notes" name="notes" maxlength="500"></textarea>
+            </div>
+            <label class="full" style="font-size:14px;color:var(--ink-2);display:flex;gap:8px;align-items:flex-start">
+              <input type="checkbox" id="f-terms" required style="margin-top:4px">
+              <span>I agree to the studio rules – arrive on time, handle equipment with care, and slots are confirmed once approved by the studio.</span>
+            </label>
+          </div>
+        </form>
+      </section>
+
+      <!-- Booking lookup -->
+      <section class="panel" id="lookup" style="margin-top:18px">
+        <h3>Already booked? Check your booking status</h3>
+        <form id="lookupForm" class="form-grid">
+          <div class="field"><label>Booking ID</label><input name="ref" required placeholder="e.g. SB4K2P1A3F"></div>
+          <div class="field"><label>Email used for booking</label><input name="email" type="email" required></div>
+          <div class="full"><button class="btn btn-outline">Check status</button></div>
+        </form>
+        <div id="lookupResult" style="margin-top:14px"></div>
+      </section>
+    </div>
+
+    <!-- Summary -->
+    <aside class="panel summary" id="summary">
+      <h3>Booking Summary</h3>
+      <div class="sum-row"><span>Studio</span><b data-s="studio_name"></b></div>
+      <div class="sum-row"><span>Date</span><b id="sumDate">—</b></div>
+      <div class="sum-row"><span>Slot</span><b id="sumSlot">—</b></div>
+      <div class="sum-row"><span>Timing</span><b id="sumTime">—</b></div>
+      <div class="sum-total"><span>Amount payable</span><span id="sumAmount">—</span></div>
+      <button class="btn btn-primary btn-block btn-lg" id="proceedBtn" disabled>Proceed</button>
+      <button class="btn btn-ghost btn-block hidden" id="backBtn" style="margin-top:10px">← Change date / slot</button>
+      <p class="note">Pay at the studio on the day of your session. Your slot is held as soon as you book, and confirmed once the studio approves it.</p>
+    </aside>
+  </main>
+
+  <!-- Step 3: confirmation -->
+  <main class="wrap hidden" id="step3">
+    <div class="panel confirm-card">
+      <div class="tick">✓</div>
+      <h2>Your slot is booked!</h2>
+      <p class="muted">We've received your booking request and the studio has been notified. A confirmation email is on its way to <b id="cEmail"></b>.</p>
+      <div class="ticket" id="ticket"></div>
+      <p style="font-size:14px;color:var(--ink-2)">Save your <b>Booking ID</b> – you can use it to check your booking status any time.</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px">
+        <a class="btn btn-green" id="waBtn" target="_blank" rel="noopener">💬 Message studio on WhatsApp</a>
+        <a class="btn btn-outline" href="book.html">Book another slot</a>
+        <a class="btn btn-ghost" href="./">Back to home</a>
+      </div>
+    </div>
+  </main>
+
+  <footer id="site-footer"></footer>
+  <script src="js/common.js"></script>
+  <script src="js/book.js"></script>
+</body>
+</html>

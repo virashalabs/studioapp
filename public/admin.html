@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem("sb-theme")||"dark"}catch(e){document.documentElement.dataset.theme="dark"}</script>
+  <title>Studio Admin</title>
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="admin">
+
+  <!-- Login -->
+  <div class="login-wrap hidden" id="login">
+    <form class="login-card" id="loginForm">
+      <div class="logo"><span class="logo-mark">🎸</span><span><span data-s="studio_name">Studio</span><small>Admin Dashboard</small></span></div>
+      <div id="loginError" class="alert alert-error hidden"></div>
+      <div id="demoNote" class="alert demo-note hidden">
+        <b>🧪 Demo website – sign-in switched off for preview</b><br>
+        Password sign-in has been turned off on this demo only, so you can explore the admin features.
+        <span class="demo-secure">🔒 On the live website this page is protected by a secure admin password, and only authorised studio staff can sign in. Visitors and customers cannot access it.</span>
+      </div>
+      <div class="field" id="pwField"><label for="pw">Admin password</label><input id="pw" type="password" autocomplete="current-password" autofocus></div>
+      <button class="btn btn-primary btn-block btn-lg" id="loginBtn" style="margin-top:16px">Log in</button>
+      <p class="note center"><a href="./">← Back to website</a></p>
+    </form>
+  </div>
+
+  <!-- App -->
+  <div class="shell hidden" id="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="logo"><span class="logo-mark">🎸</span><span><span data-s="studio_name">Studio</span><small>Admin Dashboard</small></span></div>
+      <nav class="side-nav" id="sideNav">
+        <button data-view="dashboard" class="active">📊 Dashboard</button>
+        <button data-view="bookings">📋 Bookings <span class="count" id="pendingCount"></span></button>
+        <button data-view="calendar">📅 Calendar &amp; Free Dates</button>
+        <button data-view="revenue">💰 Revenue</button>
+        <button data-view="banners">🖼️ Banners</button>
+        <button data-view="gallery">📸 Gallery</button>
+        <button data-view="testimonials">💬 Testimonials <span class="count" id="reviewCount"></span></button>
+        <button data-view="settings">⚙️ Settings</button>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="burger" id="burger" aria-label="Menu">☰</button>
+        <h1 id="viewTitle">Dashboard</h1>
+        <span class="pill demo-pill hidden" id="demoPill" title="Password sign-in is switched off for this demo. The live site is password-protected for studio staff only.">🧪 Demo preview</span>
+        <span class="spacer"></span>
+        <a href="./" target="_blank" class="btn btn-ghost btn-sm">View website ↗</a>
+        <button class="theme-toggle" id="themeToggle" aria-label="Switch light / dark theme"></button>
+        <button class="bell" id="bell" aria-label="Notifications">🔔<span class="badge" id="bellBadge"></span></button>
+        <button class="btn btn-ghost btn-sm" id="logout">Log out</button>
+        <div class="notif-pop hidden" id="notifPop"></div>
+      </header>
+
+      <div class="content">
+        <div class="demo-banner hidden" id="demoBanner">
+          <span class="ico">🔒</span>
+          <div><b>Demo preview – admin sign-in is switched off on this demo only.</b><br>
+            On the live website the admin dashboard is protected by a secure password and only authorised studio staff can sign in. Customers can never access this page.</div>
+        </div>
+        <!-- Dashboard -->
+        <section class="view on" id="view-dashboard">
+          <div class="kpis" id="kpis"></div>
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-head"><h3>⏳ Waiting for approval</h3><button class="btn btn-ghost btn-sm" data-goto="bookings" data-status="pending">View all</button></div>
+              <div class="table-wrap" id="dashPending"></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><h3>🎸 Today's sessions</h3></div>
+              <div id="dashToday"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Upcoming bookings</h3><button class="btn btn-ghost btn-sm" data-goto="calendar">Open calendar</button></div>
+            <div class="table-wrap" id="dashUpcoming"></div>
+          </div>
+        </section>
+
+        <!-- Bookings -->
+        <section class="view" id="view-bookings">
+          <div class="toolbar">
+            <input type="month" id="fMonth" title="Month">
+            <select id="fStatus">
+              <option value="">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <input class="grow" type="search" id="fSearch" placeholder="Search name, phone, email or booking ID">
+            <button class="btn btn-ghost btn-sm" id="fClear">Clear</button>
+            <button class="btn btn-primary" id="newBooking">+ New booking</button>
+          </div>
+          <div class="card"><div class="table-wrap" id="bookingTable"></div></div>
+        </section>
+
+        <!-- Calendar -->
+        <section class="view" id="view-calendar">
+          <div class="card">
+            <div class="card-head">
+              <h3 id="acalTitle"></h3>
+              <div class="cal-nav"><button id="acalPrev" aria-label="Previous month">‹</button><button id="acalToday" style="width:auto;border-radius:18px;padding:0 12px">Today</button><button id="acalNext" aria-label="Next month">›</button></div>
+            </div>
+            <div class="acal" id="acal"></div>
+            <div class="legend">
+              <span><i class="lg-avail"></i> Free all day</span>
+              <span><i class="lg-half"></i> Half day free</span>
+              <span><i style="background:var(--green-bg);border-left:3px solid var(--green)"></i> Approved</span>
+              <span><i style="background:var(--amber-bg);border-left:3px solid var(--amber)"></i> Pending</span>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="card"><div class="card-head"><h3>🟢 Free dates this month</h3></div><div id="freeDates"></div></div>
+            <div class="card"><div class="card-head"><h3>📋 Bookings this month</h3><span class="muted" id="monthSummary"></span></div><div class="table-wrap" id="monthBookings"></div></div>
+          </div>
+        </section>
+
+        <!-- Revenue -->
+        <section class="view" id="view-revenue">
+          <div class="toolbar"><select id="revYear"></select></div>
+          <div class="kpis" id="revKpis"></div>
+          <div class="card">
+            <div class="card-head"><h3 id="revChartTitle">Monthly revenue</h3><span class="muted" style="font-size:13px">Approved bookings, by session date</span></div>
+            <div class="chart" id="revChart"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Month by month</h3></div>
+            <div class="table-wrap" id="revTable"></div>
+          </div>
+        </section>
+
+        <!-- Banners -->
+        <section class="view" id="view-banners">
+          <div class="toolbar">
+            <span class="muted grow">Active banners appear in the home page carousel. Banners with an event date also show under “Upcoming Jamming Sessions”.</span>
+            <button class="btn btn-primary" id="newBanner">+ New banner</button>
+          </div>
+          <div class="banner-list" id="bannerList"></div>
+        </section>
+
+        <!-- Gallery -->
+        <section class="view" id="view-gallery">
+          <div class="toolbar">
+            <label for="gUploadCat" style="font-size:14px;color:var(--ink-2)">Upload new photos to</label>
+            <select id="gUploadCat"></select>
+            <span class="muted grow" style="font-size:13px">Sections and their order are set in Settings → Gallery sections.</span>
+          </div>
+          <label class="dropzone" id="dropzone">
+            <input type="file" id="galleryFiles" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+            <div style="font-size:30px">📤</div>
+            <b>Click or drop photos here to upload</b><br><span class="muted">JPG, PNG, WEBP or GIF · up to 6 MB each</span>
+          </label>
+          <div class="chip-row" id="gFilter"></div>
+          <div class="agallery" id="adminGallery"></div>
+        </section>
+
+        <!-- Testimonials -->
+        <section class="view" id="view-testimonials">
+          <div class="toolbar">
+            <span class="muted grow">Reviews submitted from the website wait here for approval before they appear on the home page.</span>
+            <button class="btn btn-primary" id="newTesti">+ Add testimonial</button>
+          </div>
+          <div class="card"><div class="table-wrap" id="testiTable"></div></div>
+        </section>
+
+        <!-- Settings -->
+        <section class="view" id="view-settings">
+          <form id="settingsForm">
+            <div class="settings-grid">
+              <div class="card">
+                <h3>Studio details</h3>
+                <div class="form-grid">
+                  <div class="field full"><label>Studio name</label><input name="studio_name" required></div>
+                  <div class="field full"><label>Tagline</label><input name="tagline"></div>
+                  <div class="field"><label>Contact number</label><input name="phone"></div>
+                  <div class="field"><label>WhatsApp number (with country code, digits only)</label><input name="whatsapp"></div>
+                  <div class="field"><label>Public email</label><input name="email" type="email"></div>
+                  <div class="field"><label>Owner email (booking notifications)</label><input name="owner_email" type="email" placeholder="Defaults to public email"></div>
+                  <div class="field full"><label>Address</label><input name="address"></div>
+                  <div class="field full"><label>Google Maps link</label><input name="map_link"></div>
+                  <div class="field"><label>Instagram URL</label><input name="instagram"></div>
+                  <div class="field"><label>YouTube URL</label><input name="youtube"></div>
+                </div>
+              </div>
+              <div class="card">
+                <h3>Slots &amp; pricing</h3>
+                <div class="form-grid">
+                  <div class="field"><label>Currency symbol</label><input name="currency"></div>
+                  <div class="field"><label>Booking window (days ahead)</label><input name="booking_window_days" type="number" min="7" max="730"></div>
+                  <div class="field"><label>Half-day price</label><input name="price_half" type="number" min="0"></div>
+                  <div class="field"><label>Full-day price</label><input name="price_full" type="number" min="0"></div>
+                  <div class="field"><label>First half – name</label><input name="first_half_label"></div>
+                  <div class="field"><label>First half – timing</label><input name="first_half_time"></div>
+                  <div class="field"><label>Second half – name</label><input name="second_half_label"></div>
+                  <div class="field"><label>Second half – timing</label><input name="second_half_time"></div>
+                  <div class="field full"><label>Full day – timing</label><input name="full_day_time"></div>
+                </div>
+              </div>
+              <div class="card">
+                <h3>About us page</h3>
+                <div class="field"><label>Heading</label><input name="about_title"></div>
+                <div class="field" style="margin-top:12px"><label>About text</label><textarea name="about_text" style="min-height:200px"></textarea></div>
+                <div class="field" style="margin-top:12px"><label>Gallery sections (comma-separated, in display order)</label><input name="gallery_categories" placeholder="Live Room, Audio System, Mixing Desk, …"></div>
+              </div>
+              <div class="card">
+                <div class="card-head"><h3>Studio attractions</h3><button type="button" class="btn btn-ghost btn-sm" id="addAttr">+ Add</button></div>
+                <div class="attr-row muted" style="font-size:12px"><span>Icon</span><span>Title</span><span>Description</span><span></span></div>
+                <div id="attrRows"></div>
+              </div>
+            </div>
+            <div class="save-bar">
+              <button class="btn btn-primary btn-lg">Save settings</button>
+            </div>
+          </form>
+          <div class="card" style="max-width:520px">
+            <h3>Admin access</h3>
+            <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--ink-2)">
+              <input type="checkbox" id="demoToggle" style="margin-top:3px">
+              <span><b style="color:var(--ink)">Demo mode – open admin without a password.</b><br>Turn this off before the website goes live; the password below will then be required.</span>
+            </label>
+          </div>
+          <form class="card" id="pwForm" style="max-width:520px">
+            <h3>Change admin password</h3>
+            <div class="form-grid">
+              <div class="field"><label>Current password</label><input name="current" type="password" required autocomplete="current-password"></div>
+              <div class="field"><label>New password</label><input name="next" type="password" required minlength="6" autocomplete="new-password"></div>
+            </div>
+            <button class="btn btn-dark" style="margin-top:14px">Update password</button>
+          </form>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
