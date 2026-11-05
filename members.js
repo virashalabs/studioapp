@@ -44,11 +44,11 @@ purgeOldSongs();
 setInterval(purgeOldSongs, 6 * 60 * 60 * 1000).unref();
 
 // ---------- monthly fee ----------
-// The fee for each calendar month is due by the "due day" (default the 10th). A month is paid when its payment
+// The fee for each calendar month must be paid before the "due day" (default the 10th); from that day it is overdue. A month is paid when its payment
 // covers the current plan price; after an upgrade the difference shows as a balance.
 function dueDay() {
   const n = Number(getSettings().membership_due_day);
-  return n >= 1 && n <= 28 ? n : 10;
+  return n >= 2 && n <= 28 ? n : 10;
 }
 const monthEndOf = (ym) => addDays(addMonths(ym + '-01', 1), -1);
 const prevMonth = (ym) => addMonths(ym + '-01', -1).slice(0, 7);
@@ -65,7 +65,7 @@ function fees(m, tier) {
     const amount = ym === now || !row ? priceOf(tier, m.gender) : row.amount;
     const balance = Math.max(0, amount - (row ? row.amount : 0));
     const due_date = `${ym}-${day}`;
-    const late = ym < now || t > due_date;
+    const late = ym < now || t >= due_date; // due_date itself is already late ("pay before the 10th")
     list.push({ month: ym, amount, paid: row ? row.amount : 0, balance, paid_on: row ? row.paid_on : null, due_date,
       status: balance === 0 ? 'paid' : late ? 'overdue' : 'due', part_paid: !!row && balance > 0 });
   }
@@ -321,7 +321,7 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
     setSetting('membership_plans', JSON.stringify(next));
     if (req.body.due_day !== undefined) {
       const d = Math.round(Number(req.body.due_day));
-      if (!(d >= 1 && d <= 28)) return fail(res, 400, 'Fee due day must be between 1 and 28.');
+      if (!(d >= 2 && d <= 28)) return fail(res, 400, 'Fee due day must be between 2 and 28.');
       setSetting('membership_due_day', String(d));
     }
     res.json({ ok: true, plans: next });

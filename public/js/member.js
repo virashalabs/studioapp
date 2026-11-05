@@ -80,14 +80,14 @@ function renderMember() {
   const feeMsg = {
     paid: `<div class="alert alert-ok" style="margin:0">✅ ${monthName(fee.month)} fee of <b>${App.money(fee.amount, cur)}</b> paid on ${d(fee.paid_on)}.</div>`,
     due: `<div class="alert alert-warn" style="margin:0">⏳ ${monthName(fee.month)} fee <b>${App.money(fee.balance, cur)}</b>${fee.part_paid ? ' (balance after your upgrade)' : ''} – please pay before <b>${d(fee.due_date)}</b>.</div>`,
-    overdue: `<div class="alert alert-error" style="margin:0">⚠️ ${monthName(fee.month)} fee <b>${App.money(fee.balance, cur)}</b>${fee.part_paid ? ' (balance after your upgrade)' : ''} was due on <b>${d(fee.due_date)}</b>. Please pay at the studio.</div>`,
+    overdue: `<div class="alert alert-error" style="margin:0">⚠️ ${monthName(fee.month)} fee <b>${App.money(fee.balance, cur)}</b>${fee.part_paid ? ' (balance after your upgrade)' : ''} was due before <b>${d(fee.due_date)}</b>. Please pay at the studio.</div>`,
   };
   const older = m.fees.slice(1).filter((x) => x.status !== 'paid');
   $('feeNow').innerHTML = feeMsg[fee.status] + (older.length
     ? `<div class="alert alert-error" style="margin:10px 0 0">Also unpaid: ${older.map((x) => `${monthName(x.month, { month: 'short', year: 'numeric' })} (${App.money(x.balance, cur)})`).join(', ')}</div>` : '');
   $('feeHistory').innerHTML = `<table class="song-list"><thead><tr><th>Month</th><th>Fee</th><th>Status</th></tr></thead><tbody>
     ${m.fees.map((x) => `<tr><td>${monthName(x.month, { month: 'short', year: 'numeric' })}</td><td>${App.money(x.amount, cur)}</td>
-      <td>${x.status === 'paid' ? `<span style="color:var(--green)">Paid ${d(x.paid_on)}</span>` : x.status === 'overdue' ? `<span style="color:var(--accent)">Overdue${x.part_paid ? ` · ${App.money(x.balance, cur)} balance` : ''}</span>` : `<span style="color:var(--amber)">Due by ${d(x.due_date)}</span>`}</td></tr>`).join('')}
+      <td>${x.status === 'paid' ? `<span style="color:var(--green)">Paid ${d(x.paid_on)}</span>` : x.status === 'overdue' ? `<span style="color:var(--accent)">Overdue${x.part_paid ? ` · ${App.money(x.balance, cur)} balance` : ''}</span>` : `<span style="color:var(--amber)">Pay before ${d(x.due_date)}</span>`}</td></tr>`).join('')}
   </tbody></table>`;
 
   // Songs by month

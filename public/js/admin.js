@@ -747,7 +747,7 @@ function feePill(f) {
 function feeCell(m) {
   const f = m.fee, older = m.fee_overdue.filter((x) => x !== f.month);
   return `<div style="white-space:nowrap">${feePill(f)} <small class="muted">${money(f.amount)}</small><br>
-    <small class="muted">${f.status === 'paid' ? `Paid ${App.fmtDate(f.paid_on, { day: 'numeric', month: 'short' })}` : `Due by ${App.fmtDate(f.due_date, { day: 'numeric', month: 'short' })}`}</small>
+    <small class="muted">${f.status === 'paid' ? `Paid ${App.fmtDate(f.paid_on, { day: 'numeric', month: 'short' })}` : `Pay before ${App.fmtDate(f.due_date, { day: 'numeric', month: 'short' })}`}</small>
     ${older.length ? `<br><span class="pill cancelled">Unpaid: ${older.map((x) => monthLabel(x, { month: 'short' })).join(', ')}</span>` : ''}</div>`;
 }
 function memberFlags(m) {
@@ -766,7 +766,7 @@ async function loadMembers() {
   const owing = ms.filter((m) => m.fee_due > 0), late = ms.filter((m) => m.fee_overdue.length);
   $('memberKpis').innerHTML = kpi('Members', ms.length, `${ms.filter((m) => m.active).length} active`)
     + kpi('Fees pending', money(owing.reduce((a, m) => a + m.fee_due, 0)),
-      `${owing.length} member${owing.length === 1 ? '' : 's'} · ${late.length} overdue (due by the ${ordinal(memberData.due_day)})`, late.length > 0)
+      `${owing.length} member${owing.length === 1 ? '' : 's'} · ${late.length} overdue (pay before the ${ordinal(memberData.due_day)})`, late.length > 0)
     + kpi('Songs this month', ms.reduce((a, m) => a + m.month_count, 0), monthLabel(memberData.month))
     + kpi('Over their limit', over, 'Prompt to upgrade', over > 0)
     + kpi('Upgrade requests', reqs, 'From the singer portal', reqs > 0);
@@ -931,10 +931,10 @@ async function openMember(id, month) {
         </div>
       </div>
     </div>
-    <h4 style="margin:22px 0 10px">Membership fees <span class="muted" style="font-weight:400">· due by the ${ordinal(m.due_day)} of each month</span></h4>
+    <h4 style="margin:22px 0 10px">Membership fees <span class="muted" style="font-weight:400">· to be paid before the ${ordinal(m.due_day)} of each month</span></h4>
     <table class="song-list"><thead><tr><th>Month</th><th>Fee</th><th>Status</th><th>Paid on</th><th></th></tr></thead><tbody>
       ${m.fees.map((f) => `<tr><td><b>${monthLabel(f.month)}</b></td><td>${money(f.amount)}</td><td>${feePill(f)}</td>
-        <td>${f.paid_on ? App.fmtDate(f.paid_on, { day: 'numeric', month: 'short', year: 'numeric' }) : `<span class="muted">Due ${App.fmtDate(f.due_date, { day: 'numeric', month: 'short' })}</span>`}</td>
+        <td>${f.paid_on ? App.fmtDate(f.paid_on, { day: 'numeric', month: 'short', year: 'numeric' }) : `<span class="muted">Pay before ${App.fmtDate(f.due_date, { day: 'numeric', month: 'short' })}</span>`}</td>
         <td style="text-align:right">${f.status !== 'paid' ? `<button type="button" class="btn btn-green btn-sm" data-pay="${f.month}">Mark paid</button>` : ''}
           ${f.paid_on ? `<button type="button" class="btn btn-ghost btn-sm" data-unpay="${f.month}" title="Undo this payment">Undo</button>` : ''}</td></tr>`).join('')}
     </tbody></table>
