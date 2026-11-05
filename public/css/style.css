@@ -665,3 +665,10 @@ a.slide { display: block; }
 #galleryPreview { grid-template-columns: repeat(3, 1fr); }
 @media (max-width: 960px) { #galleryPreview { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { #galleryPreview { grid-template-columns: 1fr; } }
+
+/* Gallery tiles show the whole photo (no cropped faces on portrait shots); the empty space is filled
+   with a blurred copy of the same image. Both layers inherit the tile's inline background-image. */
+.gallery-item::before, .gallery-item::after { content: ''; position: absolute; background: inherit; pointer-events: none; }
+.gallery-item::before { inset: -24px; background-size: cover; filter: blur(18px) brightness(.75); }
+.gallery-item::after { inset: 0; background-size: contain; background-position: center; background-color: transparent; }
+.gallery-item span { z-index: 1; }
