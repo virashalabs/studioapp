@@ -109,14 +109,14 @@ function verifyPassword(password, stored) {
 }
 
 const DEFAULT_SETTINGS = {
-  studio_name: 'Riff Room Studios',
+  studio_name: 'Rhythm Rehearsal Studio',
   tagline: 'Plug in. Play loud. Make memories.',
-  phone: '+91 98765 43210',
-  whatsapp: '919876543210',
-  email: 'hello@riffroom.studio',
+  phone: '+91 99622 58845',
+  whatsapp: '919962258845',
+  email: 'rhythmmusicals2024@gmail.com',
   owner_email: '',
-  address: '2nd Floor, Melody Arcade, MG Road, Bengaluru 560001',
-  map_link: 'https://maps.google.com',
+  address: '91C, 11th West Street, Metha Nagar, Kundrathur, Chennai, Tamil Nadu 600069',
+  map_link: 'https://www.google.com/maps/search/?api=1&query=Rhythm+Rehearsal+Studio+Kundrathur+Chennai+600069',
   currency: '₹',
   price_half: '2500',
   price_full: '4500',
@@ -128,7 +128,7 @@ const DEFAULT_SETTINGS = {
   booking_window_days: '120',
   about_title: 'A home for every band, every sound',
   about_text:
-    'Riff Room Studios is a fully air-conditioned, acoustically treated rehearsal space built by musicians, for musicians. ' +
+    'Rhythm Rehearsal Studio is a fully air-conditioned, acoustically treated rehearsal space built by musicians, for musicians. ' +
     'Whether you are a five-piece rock band tightening a setlist, a choir preparing for a concert, or a group of friends ' +
     'celebrating with a jam night, our room is ready the moment you walk in.\n\n' +
     'Book a half day for a focused rehearsal, or take the whole day for workshops, music meets, album pre-production ' +
