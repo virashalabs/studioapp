@@ -43,6 +43,41 @@ function purgeOldSongs() {
 purgeOldSongs();
 setInterval(purgeOldSongs, 6 * 60 * 60 * 1000).unref();
 
+// ---------- monthly fee ----------
+// The fee for each calendar month is due by the "due day" (default the 10th). A month is paid when its payment
+// covers the current plan price; after an upgrade the difference shows as a balance.
+function dueDay() {
+  const n = Number(getSettings().membership_due_day);
+  return n >= 1 && n <= 28 ? n : 10;
+}
+const monthEndOf = (ym) => addDays(addMonths(ym + '-01', 1), -1);
+const prevMonth = (ym) => addMonths(ym + '-01', -1).slice(0, 7);
+
+function fees(m, tier) {
+  const rows = db.prepare('SELECT month, amount, paid_on FROM member_payments WHERE member_id = ?').all(m.id);
+  const paid = Object.fromEntries(rows.map((r) => [r.month, r]));
+  const day = pad(dueDay()), now = thisMonth(), t = today();
+  const first = [m.start_date.slice(0, 7), addMonths(t, -11).slice(0, 7)].sort()[1]; // joining month, at most 12 months back
+  const list = [];
+  for (let ym = now; ym >= first; ym = prevMonth(ym)) {
+    const row = paid[ym];
+    // This month is charged at the current plan; past months at what was paid (or the current price if unpaid).
+    const amount = ym === now || !row ? priceOf(tier, m.gender) : row.amount;
+    const balance = Math.max(0, amount - (row ? row.amount : 0));
+    const due_date = `${ym}-${day}`;
+    const late = ym < now || t > due_date;
+    list.push({ month: ym, amount, paid: row ? row.amount : 0, balance, paid_on: row ? row.paid_on : null, due_date,
+      status: balance === 0 ? 'paid' : late ? 'overdue' : 'due', part_paid: !!row && balance > 0 });
+  }
+  return list;
+}
+
+// Valid through the end of the latest paid month (the joining month if nothing has been paid yet).
+function refreshValidity(m) {
+  const last = db.prepare('SELECT MAX(month) m FROM member_payments WHERE member_id = ?').get(m.id).m;
+  db.prepare('UPDATE members SET valid_until = ? WHERE id = ?').run(monthEndOf(last || m.start_date.slice(0, 7)), m.id);
+}
+
 // ---------- summaries ----------
 function monthCount(memberId, ym = thisMonth()) {
   return db.prepare("SELECT COUNT(*) n FROM member_songs WHERE member_id = ? AND substr(sung_on,1,7) = ?").get(memberId, ym).n;
@@ -57,6 +92,8 @@ function summary(m, plans = getPlans(), ym = thisMonth()) {
   const tierView = (t) => t && { key: t.key, name: t.name, limit: t.limit, price: priceOf(t, m.gender) };
   const req = m.upgrade_request && plans.find((p) => p.key === m.upgrade_request);
   const { pin_hash, ...pub } = m;
+  const feeList = fees(m, tier);
+  const unpaid = feeList.filter((f) => f.status !== 'paid');
   return {
     ...pub,
     plan_name: tier.name,
@@ -69,7 +106,13 @@ function summary(m, plans = getPlans(), ym = thisMonth()) {
     // Next plan that would cover this month's songs (only when the current one doesn't).
     suggested: over ? tierView(plans.indexOf(covering) > idx ? covering : plans[idx + 1]) : null,
     requested: tierView(req),
-    active: m.valid_until >= today(),
+    // Still active in the grace period: paid through last month and this month's fee isn't due yet.
+    active: m.valid_until >= today() || (feeList[0].status === 'due' && m.valid_until >= monthEndOf(prevMonth(thisMonth()))),
+    fee: feeList[0],                 // this month
+    fees: feeList,                   // this month back to joining (max 12 months), newest first
+    fee_due: unpaid.reduce((a, f) => a + f.balance, 0),
+    fee_overdue: unpaid.filter((f) => f.status === 'overdue').map((f) => f.month),
+    due_day: dueDay(),
   };
 }
 
@@ -117,7 +160,7 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
   }
 
   // ----- public -----
-  app.get('/api/membership/plans', (req, res) => res.json({ plans: getPlans(), currency: getSettings().currency || '₹' }));
+  app.get('/api/membership/plans', (req, res) => res.json({ plans: getPlans(), currency: getSettings().currency || '₹', due_day: dueDay() }));
 
   app.post('/api/member/login', (req, res) => {
     const no = clean(req.body.member_no, 12).toUpperCase().replace(/\s+/g, '');
@@ -167,7 +210,7 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
     const ym = MONTH_RE.test(req.query.month || '') ? req.query.month : thisMonth();
     const plans = getPlans();
     const list = db.prepare('SELECT * FROM members ORDER BY member_no').all().map((m) => summary(m, plans, ym));
-    res.json({ members: list, plans, month: ym });
+    res.json({ members: list, plans, month: ym, due_day: dueDay() });
   });
 
   app.get('/api/admin/members/:id', (req, res) => {
@@ -193,7 +236,12 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
     const pin = /^\d{4,6}$/.test(req.body.pin || '') ? req.body.pin : f.phone.replace(/\D/g, '').slice(-4).padStart(4, '0');
     const no = nextMemberNo();
     const id = db.prepare(`INSERT INTO members (member_no, name, gender, phone, email, dob, address, plan, start_date, valid_until, pin_hash)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(no, f.name, f.gender, f.phone, f.email, f.dob, f.address, f.plan, start, periodEnd(start), hashPassword(pin)).lastInsertRowid;
+      VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(no, f.name, f.gender, f.phone, f.email, f.dob, f.address, f.plan, start, monthEndOf(start.slice(0, 7)), hashPassword(pin)).lastInsertRowid;
+    // Joining-month fee collected at sign-up.
+    if (req.body.paid) {
+      const tier = getPlans().find((p) => p.key === f.plan);
+      db.prepare('INSERT INTO member_payments (member_id, month, plan, amount, paid_on) VALUES (?,?,?,?,?)').run(id, start.slice(0, 7), f.plan, priceOf(tier, f.gender), today());
+    }
     res.json({ ok: true, id, member_no: no, pin });
   });
 
@@ -210,14 +258,25 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
     res.json({ ok: true });
   });
 
-  // Renew for one more month, from the current expiry (or from today if it has already lapsed).
-  app.post('/api/admin/members/:id/renew', (req, res) => {
+  // Record a month's fee as paid (at the member's current plan price). Paying a month extends validity to its end.
+  app.post('/api/admin/members/:id/payments', (req, res) => {
     const m = getMember(req.params.id);
     if (!m) return fail(res, 404, 'Member not found.');
-    const from = m.valid_until >= today() ? addDays(m.valid_until, 1) : today();
-    const until = periodEnd(from);
-    db.prepare('UPDATE members SET valid_until = ? WHERE id = ?').run(until, m.id);
-    res.json({ ok: true, valid_until: until });
+    const ym = MONTH_RE.test(req.body.month || '') ? req.body.month : thisMonth();
+    if (ym > thisMonth() || ym < m.start_date.slice(0, 7)) return fail(res, 400, 'That month is outside this membership.');
+    const tier = getPlans().find((p) => p.key === m.plan) || getPlans()[0];
+    db.prepare(`INSERT INTO member_payments (member_id, month, plan, amount, paid_on) VALUES (?,?,?,?,?)
+      ON CONFLICT(member_id, month) DO UPDATE SET plan = excluded.plan, amount = excluded.amount, paid_on = excluded.paid_on`)
+      .run(m.id, ym, m.plan, priceOf(tier, m.gender), today());
+    refreshValidity(m);
+    res.json({ ok: true, member: summary(getMember(m.id)) });
+  });
+  app.delete('/api/admin/members/:id/payments/:month', (req, res) => {
+    const m = getMember(req.params.id);
+    if (!m) return fail(res, 404, 'Member not found.');
+    db.prepare('DELETE FROM member_payments WHERE member_id = ? AND month = ?').run(m.id, req.params.month);
+    refreshValidity(m);
+    res.json({ ok: true });
   });
 
   app.delete('/api/admin/members/:id', (req, res) => {
@@ -260,6 +319,11 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
         price_male: Math.max(0, Number(p.price_male) || 0), price_female: Math.max(0, Number(p.price_female) || 0) };
     });
     setSetting('membership_plans', JSON.stringify(next));
+    if (req.body.due_day !== undefined) {
+      const d = Math.round(Number(req.body.due_day));
+      if (!(d >= 1 && d <= 28)) return fail(res, 400, 'Fee due day must be between 1 and 28.');
+      setSetting('membership_due_day', String(d));
+    }
     res.json({ ok: true, plans: next });
   });
 

@@ -49,7 +49,8 @@ Revenue = approved bookings (by session date). Mark bookings **paid** to track c
 Pending bookings are shown separately as "pipeline".
 
 ### Singer membership
-- **Plans** (Admin → Members → *Membership plans & pricing*): Basic / Economy / Premium / Unlimited, each with a monthly song limit and separate male and female prices.
+- **Plans** (Admin → Members → *Membership plans & pricing*): Budget / Economy / Premium / Unlimited, each with a monthly song limit and separate male and female prices.
+- **Monthly fee** is due by the 10th (configurable). Admin marks each month paid; paying a month extends validity to its end. Unpaid fees after the due day show as overdue to the admin and the singer; after an upgrade the price difference shows as a balance.
 - **Members** get a number `RRS` + 4 digits and a black-and-gold membership card (shown on screen, downloadable as PNG).
 - **Songs** are logged by the studio (Admin → Members → *+ Songs*, one song per line, optionally `Song – Movie`). Counts reset each calendar month; records older than 12 months are deleted automatically.
 - **Over the limit:** the admin is prompted to upgrade the singer when logging songs, and the singer sees an upgrade prompt and can send an upgrade request from their page.

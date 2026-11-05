@@ -101,6 +101,17 @@ CREATE TABLE IF NOT EXISTS member_songs (
 );
 CREATE INDEX IF NOT EXISTS idx_member_songs ON member_songs(member_id, sung_on);
 
+-- Monthly membership fee: one row per member per paid month.
+CREATE TABLE IF NOT EXISTS member_payments (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  member_id  INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  month      TEXT NOT NULL,                      -- YYYY-MM
+  plan       TEXT NOT NULL,
+  amount     REAL NOT NULL,
+  paid_on    TEXT NOT NULL,                      -- YYYY-MM-DD
+  UNIQUE (member_id, month)
+);
+
 CREATE TABLE IF NOT EXISTS notifications (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   type       TEXT NOT NULL,
@@ -175,11 +186,12 @@ const DEFAULT_SETTINGS = {
   gallery_categories: 'Live Room, Audio System, Mixing Desk, Green Room Lounge, Pantry Area, Events',
   // Membership tiers: songs per calendar month (null = unlimited) and monthly price for male / female singers.
   membership_plans: JSON.stringify([
-    { key: 'basic', name: 'Basic', limit: 20, price_male: 1500, price_female: 1200 },
-    { key: 'economy', name: 'Economy', limit: 30, price_male: 2000, price_female: 1700 },
-    { key: 'premium', name: 'Premium', limit: 45, price_male: 3000, price_female: 2500 },
+    { key: 'basic', name: 'Budget', limit: 20, price_male: 1500, price_female: 1200 },
+    { key: 'economy', name: 'Economy', limit: 30, price_male: 2500, price_female: 1700 },
+    { key: 'premium', name: 'Premium', limit: 40, price_male: 3500, price_female: 2500 },
     { key: 'unlimited', name: 'Unlimited', limit: null, price_male: 4000, price_female: 3500 },
   ]),
+  membership_due_day: '10', // monthly fee must be paid by this day of the month
   instagram: 'https://instagram.com',
   youtube: 'https://youtube.com',
 };
@@ -255,20 +267,32 @@ function seedMembers() {
   const insM = db.prepare(`INSERT INTO members (member_no, name, gender, phone, email, dob, address, plan, start_date, valid_until, upgrade_request, pin_hash)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`);
   const insS = db.prepare('INSERT INTO member_songs (member_id, sung_on, title, album) VALUES (?,?,?,?)');
+  const insP = db.prepare('INSERT INTO member_payments (member_id, month, plan, amount, paid_on) VALUES (?,?,?,?,?)');
+  const plans = JSON.parse(DEFAULT_SETTINGS.membership_plans);
+  const monthOf = (ago) => ymd(new Date(today.getFullYear(), today.getMonth() - ago, 1)).slice(0, 7);
+  const monthEnd = (ago) => ymd(new Date(today.getFullYear(), today.getMonth() - ago + 1, 0));
   const pin = hashPassword('1234');
   const demo = [
-    // member_no, name, gender, phone, email, plan, upgrade request, songs per month [this month, 1 ago, 2 ago, ...]
-    ['RRS1001', 'Ram Kumar', 'Male', '+91 98400 11223', 'ram.kumar@example.com', 'basic', null, [22, 18, 20, 16, 19]],
-    ['RRS1002', 'Priya Lakshmi', 'Female', '+91 98410 22334', 'priya.l@example.com', 'economy', null, [14, 27, 25, 22]],
-    ['RRS1003', 'Karthik Raja', 'Male', '+91 98420 33445', 'karthik.r@example.com', 'premium', null, [31, 40, 44, 38, 29, 35]],
-    ['RRS1004', 'Meena Sundar', 'Female', '+91 98430 44556', 'meena.s@example.com', 'unlimited', null, [52, 61, 48]],
-    ['RRS1005', 'Arun Prakash', 'Male', '+91 98440 55667', 'arun.p@example.com', 'basic', null, [19, 12]],
-    ['RRS1006', 'Divya Ramesh', 'Female', '+91 98450 66778', 'divya.r@example.com', 'basic', 'economy', [24, 20]],
+    // member_no, name, gender, phone, email, plan, upgrade request, songs per month [this month, 1 ago, 2 ago, ...],
+    // unpaid months (0 = this month, 1 = last month; every other month since joining is paid)
+    ['RRS1001', 'Ram Kumar', 'Male', '+91 98400 11223', 'ram.kumar@example.com', 'basic', null, [22, 18, 20, 16, 19], []],
+    ['RRS1002', 'Priya Lakshmi', 'Female', '+91 98410 22334', 'priya.l@example.com', 'economy', null, [14, 27, 25, 22], []],
+    ['RRS1003', 'Karthik Raja', 'Male', '+91 98420 33445', 'karthik.r@example.com', 'premium', null, [31, 38, 36, 38, 29, 35], [0]],
+    ['RRS1004', 'Meena Sundar', 'Female', '+91 98430 44556', 'meena.s@example.com', 'unlimited', null, [52, 61, 48], []],
+    ['RRS1005', 'Arun Prakash', 'Male', '+91 98440 55667', 'arun.p@example.com', 'basic', null, [19, 12, 15], [0, 1]],
+    ['RRS1006', 'Divya Ramesh', 'Female', '+91 98450 66778', 'divya.r@example.com', 'basic', 'economy', [24, 20], []],
   ];
   let k = 0;
-  for (const [no, name, gender, phone, email, plan, req, months] of demo) {
-    const id = insM.run(no, name, gender, phone, email, null, 'Chennai', plan, addDays(-12), addDays(18), req, pin).lastInsertRowid;
+  const paidDay = (ago) => (ago === 0 ? Math.min(3, today.getDate()) : 5);
+  for (const [no, name, gender, phone, email, plan, req, months, unpaid] of demo) {
+    const tier = plans.find((p) => p.key === plan);
+    const price = gender === 'Female' ? tier.price_female : tier.price_male;
+    const paidAgo = months.map((_, ago) => ago).filter((ago) => !unpaid.includes(ago));
+    // Valid through the end of the latest paid month (or the joining month if nothing is paid yet).
+    const validUntil = monthEnd(paidAgo.length ? Math.min(...paidAgo) : months.length - 1);
+    const id = insM.run(no, name, gender, phone, email, null, 'Chennai', plan, monthOf(months.length - 1) + '-01', validUntil, req, pin).lastInsertRowid;
     months.forEach((n, ago) => datesIn(ago, n).forEach((d) => { const [t, a] = SONGS[k++ % SONGS.length]; insS.run(id, d, t, a); }));
+    for (const ago of paidAgo) insP.run(id, monthOf(ago), plan, price, `${monthOf(ago)}-${pad(paidDay(ago))}`);
   }
 }
 seed();

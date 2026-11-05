@@ -4,6 +4,7 @@ const $ = (id) => document.getElementById(id);
 const esc = App.esc;
 let cur = '₹', plans = [], data = null, month = null;
 
+function ordinal(n) { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
 const monthName = (ym, opts = { month: 'long', year: 'numeric' }) => new Date(ym + '-01T00:00').toLocaleDateString('en-IN', opts);
 const price = (p, gender) => App.money(gender === 'Female' ? p.price_female : p.price_male, cur);
 const songsText = (limit) => (limit == null ? 'Unlimited songs' : `Up to ${limit} songs / month`);
@@ -21,6 +22,7 @@ function drawPlans(gender, currentKey = null) {
 async function boot() {
   const pub = await App.api('api/membership/plans');
   plans = pub.plans; cur = pub.currency;
+  $('dueNote').textContent = `The membership fee is to be paid before the ${ordinal(pub.due_day)} of each month.`;
   try {
     data = await App.api('api/member/me');
   } catch (err) {
@@ -47,7 +49,7 @@ function renderMember() {
   $('heroSub').textContent = `${m.member_no} · ${m.plan_name} membership · ${App.money(m.plan_price, cur)} / month`;
   $('validity').innerHTML = m.active
     ? `Valid until <b>${App.fmtDate(m.valid_until, { day: 'numeric', month: 'short', year: 'numeric' })}</b>`
-    : `<span style="color:var(--accent)">Expired on ${App.fmtDate(m.valid_until, { day: 'numeric', month: 'short', year: 'numeric' })} – please renew at the studio.</span>`;
+    : `<span style="color:var(--accent)">Expired on ${App.fmtDate(m.valid_until, { day: 'numeric', month: 'short', year: 'numeric' })} – please pay your membership fee at the studio.</span>`;
 
   // This month's usage
   const lim = m.plan_limit;
@@ -72,6 +74,21 @@ function renderMember() {
     alert = `<div class="alert alert-warn" style="margin:0">Only ${m.remaining} song${m.remaining === 1 ? '' : 's'} left on ${esc(m.plan_name)} this month.${next ? ` ${esc(next.name)} gives you ${songsText(next.limit).toLowerCase()}.` : ''}</div>`;
   }
   $('usageAlert').innerHTML = alert;
+
+  // Monthly fee
+  const fee = m.fee, d = (x) => App.fmtDate(x, { day: 'numeric', month: 'short' });
+  const feeMsg = {
+    paid: `<div class="alert alert-ok" style="margin:0">✅ ${monthName(fee.month)} fee of <b>${App.money(fee.amount, cur)}</b> paid on ${d(fee.paid_on)}.</div>`,
+    due: `<div class="alert alert-warn" style="margin:0">⏳ ${monthName(fee.month)} fee <b>${App.money(fee.balance, cur)}</b>${fee.part_paid ? ' (balance after your upgrade)' : ''} – please pay before <b>${d(fee.due_date)}</b>.</div>`,
+    overdue: `<div class="alert alert-error" style="margin:0">⚠️ ${monthName(fee.month)} fee <b>${App.money(fee.balance, cur)}</b>${fee.part_paid ? ' (balance after your upgrade)' : ''} was due on <b>${d(fee.due_date)}</b>. Please pay at the studio.</div>`,
+  };
+  const older = m.fees.slice(1).filter((x) => x.status !== 'paid');
+  $('feeNow').innerHTML = feeMsg[fee.status] + (older.length
+    ? `<div class="alert alert-error" style="margin:10px 0 0">Also unpaid: ${older.map((x) => `${monthName(x.month, { month: 'short', year: 'numeric' })} (${App.money(x.balance, cur)})`).join(', ')}</div>` : '');
+  $('feeHistory').innerHTML = `<table class="song-list"><thead><tr><th>Month</th><th>Fee</th><th>Status</th></tr></thead><tbody>
+    ${m.fees.map((x) => `<tr><td>${monthName(x.month, { month: 'short', year: 'numeric' })}</td><td>${App.money(x.amount, cur)}</td>
+      <td>${x.status === 'paid' ? `<span style="color:var(--green)">Paid ${d(x.paid_on)}</span>` : x.status === 'overdue' ? `<span style="color:var(--accent)">Overdue${x.part_paid ? ` · ${App.money(x.balance, cur)} balance` : ''}</span>` : `<span style="color:var(--amber)">Due by ${d(x.due_date)}</span>`}</td></tr>`).join('')}
+  </tbody></table>`;
 
   // Songs by month
   month = month && data.months.some((x) => x.month === month) ? month : data.months[0].month;

@@ -739,6 +739,17 @@ function usageCell(m) {
   return `<div style="min-width:130px"><b>${m.month_count}</b> <span class="muted">/ ${lim == null ? '∞' : lim}</span>
     <div class="meter ${cls}" style="margin:5px 0 0;height:6px"><span style="width:${pct}%"></span></div></div>`;
 }
+const FEE_PILL = { paid: ['approved', '✅ Paid'], due: ['pending', '⏳ Due'], overdue: ['cancelled', '⚠ Overdue'] };
+function feePill(f) {
+  const [cls, label] = FEE_PILL[f.status];
+  return `<span class="pill ${cls}">${f.part_paid ? `${f.status === 'overdue' ? '⚠' : '⏳'} Balance ${money(f.balance)}` : label}</span>`;
+}
+function feeCell(m) {
+  const f = m.fee, older = m.fee_overdue.filter((x) => x !== f.month);
+  return `<div style="white-space:nowrap">${feePill(f)} <small class="muted">${money(f.amount)}</small><br>
+    <small class="muted">${f.status === 'paid' ? `Paid ${App.fmtDate(f.paid_on, { day: 'numeric', month: 'short' })}` : `Due by ${App.fmtDate(f.due_date, { day: 'numeric', month: 'short' })}`}</small>
+    ${older.length ? `<br><span class="pill cancelled">Unpaid: ${older.map((x) => monthLabel(x, { month: 'short' })).join(', ')}</span>` : ''}</div>`;
+}
 function memberFlags(m) {
   return [
     m.requested ? `<span class="pill pending" title="The singer asked for this upgrade">🙋 Wants ${esc(m.requested.name)}</span>` : '',
@@ -752,7 +763,10 @@ async function loadMembers() {
   const ms = memberData.members;
   const kpi = (label, value, sub = '', attention = false) => `<div class="kpi ${attention ? 'attention' : ''}"><div class="label">${label}</div><div class="value">${value}</div><div class="sub">${sub}</div></div>`;
   const over = ms.filter((m) => m.over_limit).length, reqs = ms.filter((m) => m.requested).length;
+  const owing = ms.filter((m) => m.fee_due > 0), late = ms.filter((m) => m.fee_overdue.length);
   $('memberKpis').innerHTML = kpi('Members', ms.length, `${ms.filter((m) => m.active).length} active`)
+    + kpi('Fees pending', money(owing.reduce((a, m) => a + m.fee_due, 0)),
+      `${owing.length} member${owing.length === 1 ? '' : 's'} · ${late.length} overdue (due by the ${ordinal(memberData.due_day)})`, late.length > 0)
     + kpi('Songs this month', ms.reduce((a, m) => a + m.month_count, 0), monthLabel(memberData.month))
     + kpi('Over their limit', over, 'Prompt to upgrade', over > 0)
     + kpi('Upgrade requests', reqs, 'From the singer portal', reqs > 0);
@@ -765,24 +779,35 @@ function drawMembers() {
   const list = memberData.members.filter((m) =>
     (!q || [m.name, m.member_no, m.phone].some((v) => String(v || '').toLowerCase().includes(q)))
     && (!g || m.gender === g)
-    && (!f || (f === 'over' && m.over_limit) || (f === 'requests' && m.requested) || (f === 'expired' && !m.active)));
-  $('memberTable').innerHTML = list.length ? `<table class="data"><thead><tr><th>Member</th><th>Gender</th><th>Plan</th><th>This month</th><th>Valid until</th><th></th></tr></thead><tbody>
+    && (!f || (f === 'over' && m.over_limit) || (f === 'requests' && m.requested) || (f === 'expired' && !m.active)
+      || (f === 'unpaid' && m.fee_due > 0) || (f === 'overdue' && m.fee_overdue.length)));
+  $('memberTable').innerHTML = list.length ? `<table class="data"><thead><tr><th>Member</th><th>Gender</th><th>Plan</th><th>Songs this month</th><th>Fee · ${monthLabel(memberData.month, { month: 'short' })}</th><th>Valid until</th><th></th></tr></thead><tbody>
     ${list.map((m) => `<tr>
       <td><a href="#" data-mview="${m.id}"><b>${esc(m.name)}</b></a><br><small class="muted">${esc(m.member_no)} · ${esc(m.phone)}</small></td>
       <td>${esc(m.gender)}</td>
       <td><b>${esc(m.plan_name)}</b><br><small class="muted">${money(m.plan_price)} / month</small></td>
       <td>${usageCell(m)}</td>
+      <td>${feeCell(m)}</td>
       <td style="white-space:nowrap">${fmtShort(m.valid_until)}<br>${memberFlags(m)}</td>
-      <td><div class="actions"><button class="btn btn-ghost btn-sm" data-mview="${m.id}">View</button><button class="btn btn-primary btn-sm" data-msongs="${m.id}">+ Songs</button></div></td>
+      <td><div class="actions"><button class="btn btn-ghost btn-sm" data-mview="${m.id}">View</button><button class="btn btn-primary btn-sm" data-msongs="${m.id}">+ Songs</button>
+        ${m.fee.status !== 'paid' ? `<button class="btn btn-green btn-sm" data-mpay="${m.id}" data-month="${m.fee.month}">Mark paid</button>` : ''}</div></td>
     </tr>`).join('')}</tbody></table>` : '<div class="empty">No members match.</div>';
 }
 ['mSearch', 'mGender', 'mFilter'].forEach((id) => $(id).addEventListener('input', drawMembers));
 $('memberTable').addEventListener('click', (e) => {
-  const v = e.target.closest('[data-mview]'), s = e.target.closest('[data-msongs]');
+  const v = e.target.closest('[data-mview]'), s = e.target.closest('[data-msongs]'), pay = e.target.closest('[data-mpay]');
   if (v) { e.preventDefault(); openMember(Number(v.dataset.mview)); }
+  if (pay) markPaid(memberData.members.find((m) => m.id === Number(pay.dataset.mpay)), pay.dataset.month).then(reload).catch((err) => App.toast(err.message, 'error'));
   if (s) logSongs(memberData.members.find((m) => m.id === Number(s.dataset.msongs)));
 });
 
+function ordinal(n) { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+async function markPaid(m, month) {
+  const f = m.fees.find((x) => x.month === month) || m.fee;
+  if (!confirm(`Record the ${monthLabel(month)} membership fee of ${money(f.part_paid ? f.balance : f.amount)} as paid by ${m.name}?`)) return;
+  await App.api(`api/admin/members/${m.id}/payments`, { method: 'POST', body: { month } });
+  App.toast(`${monthLabel(month)} fee recorded for ${m.name}`, 'ok');
+}
 async function changePlan(m, planKey) {
   const p = memberData.plans.find((x) => x.key === planKey);
   await App.api(`api/admin/members/${m.id}`, { method: 'PUT', body: { plan: planKey } });
@@ -793,7 +818,8 @@ async function promptUpgrade(m) {
   if (!m.over_limit || !m.suggested) return false;
   const s = m.suggested;
   App.toast(`⚠ ${m.name} has sung ${m.month_count} songs this month – over the ${m.plan_name} limit of ${m.plan_limit}.`, 'error');
-  if (!confirm(`${m.name} has crossed the ${m.plan_name} limit (${m.month_count} of ${m.plan_limit} songs this month).\n\nUpgrade to ${s.name} – ${limitLabel(s.limit)} / month for ${money(s.price)}?`)) return false;
+  const paidNow = m.fee.paid > 0 ? `\n\n${monthLabel(m.month)} is already paid (${money(m.fee.paid)}), so ${money(Math.max(0, s.price - m.fee.paid))} more will be due.` : '';
+  if (!confirm(`${m.name} has crossed the ${m.plan_name} limit (${m.month_count} of ${m.plan_limit} songs this month).\n\nUpgrade to ${s.name} – ${limitLabel(s.limit)} / month for ${money(s.price)}?${paidNow}`)) return false;
   await changePlan(m, s.key);
   return true;
 }
@@ -830,7 +856,8 @@ function memberForm(m = null) {
     ? `<div class="field"><label>Valid until</label><input name="valid_until" type="date" value="${v('valid_until')}"></div>
        <div class="field"><label>Reset PIN (optional)</label><input name="pin" inputmode="numeric" maxlength="6" placeholder="4–6 digits"></div>`
     : `<div class="field"><label>Start date</label><input name="start_date" type="date" value="${App.ymd(new Date())}"></div>
-       <div class="field"><label>PIN</label><input name="pin" inputmode="numeric" maxlength="6" placeholder="Default: last 4 digits of phone"></div>`;
+       <div class="field"><label>PIN</label><input name="pin" inputmode="numeric" maxlength="6" placeholder="Default: last 4 digits of phone"></div>
+       <label class="full" style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" name="paid" value="1" checked> First month's fee collected now</label>`;
   const { el } = modal(m ? `Edit ${esc(m.name)}` : 'New member', `
     <div class="form-grid">
       <div class="field"><label>Full name <span class="req">*</span></label><input name="name" required maxlength="80" value="${v('name')}"></div>
@@ -900,11 +927,17 @@ async function openMember(id, month) {
         <div class="actions" style="margin-top:14px">
           <button type="button" class="btn btn-primary btn-sm" data-act="songs">+ Log songs</button>
           <button type="button" class="btn btn-ghost btn-sm" data-act="edit">Edit details / plan</button>
-          <button type="button" class="btn btn-ghost btn-sm" data-act="renew">Renew 1 month</button>
           <button type="button" class="btn btn-ghost btn-sm" data-act="delete" style="color:var(--red)">Delete</button>
         </div>
       </div>
     </div>
+    <h4 style="margin:22px 0 10px">Membership fees <span class="muted" style="font-weight:400">· due by the ${ordinal(m.due_day)} of each month</span></h4>
+    <table class="song-list"><thead><tr><th>Month</th><th>Fee</th><th>Status</th><th>Paid on</th><th></th></tr></thead><tbody>
+      ${m.fees.map((f) => `<tr><td><b>${monthLabel(f.month)}</b></td><td>${money(f.amount)}</td><td>${feePill(f)}</td>
+        <td>${f.paid_on ? App.fmtDate(f.paid_on, { day: 'numeric', month: 'short', year: 'numeric' }) : `<span class="muted">Due ${App.fmtDate(f.due_date, { day: 'numeric', month: 'short' })}</span>`}</td>
+        <td style="text-align:right">${f.status !== 'paid' ? `<button type="button" class="btn btn-green btn-sm" data-pay="${f.month}">Mark paid</button>` : ''}
+          ${f.paid_on ? `<button type="button" class="btn btn-ghost btn-sm" data-unpay="${f.month}" title="Undo this payment">Undo</button>` : ''}</td></tr>`).join('')}
+    </tbody></table>
     <h4 style="margin:22px 0 10px">Songs sung <span class="muted" style="font-weight:400">· ${d.total} in the last 12 months (records kept 12 months)</span></h4>
     <div class="month-chips">${d.months.map((x) => `<button type="button" class="chip ${x.month === month ? 'on' : ''}" data-month="${x.month}">${monthLabel(x.month, { month: 'short', year: '2-digit' })} <small>${x.count}</small></button>`).join('')}</div>
     ${songs.length ? `<table class="song-list"><thead><tr><th>#</th><th>Date</th><th>Song</th><th>Movie / Album</th><th></th></tr></thead><tbody>${songRows}</tbody></table>`
@@ -922,6 +955,13 @@ async function openMember(id, month) {
     if (!t || t.hasAttribute('data-close')) return;
     try {
       if (t.dataset.month) return openMember(id, t.dataset.month);
+      if (t.dataset.pay) { await markPaid(m, t.dataset.pay); reload(); return openMember(id, month); }
+      if (t.dataset.unpay) {
+        if (!confirm(`Undo the ${monthLabel(t.dataset.unpay)} payment for ${m.name}?`)) return;
+        await App.api(`api/admin/members/${id}/payments/${t.dataset.unpay}`, { method: 'DELETE' });
+        reload();
+        return openMember(id, month);
+      }
       if (t.dataset.delsong) {
         if (!confirm('Remove this song from the record?')) return;
         await App.api(`api/admin/members/${id}/songs/${t.dataset.delsong}`, { method: 'DELETE' });
@@ -933,12 +973,6 @@ async function openMember(id, month) {
         case 'songs': return logSongs(m, () => openMember(id));
         case 'edit': memberModal.close(); return memberForm(m);
         case 'upgrade': await changePlan(m, t.dataset.plan); reload(); return openMember(id, month);
-        case 'renew': {
-          const r = await App.api(`api/admin/members/${id}/renew`, { method: 'POST' });
-          App.toast(`Renewed – valid until ${fmtShort(r.valid_until)}`, 'ok');
-          reload();
-          return openMember(id, month);
-        }
         case 'delete':
           if (!confirm(`Delete ${m.name} (${m.member_no}) and all their song records?`)) return;
           await App.api(`api/admin/members/${id}`, { method: 'DELETE' });
@@ -960,13 +994,14 @@ function drawPlansForm() {
       <td><input data-k="price_male" type="number" min="0" value="${p.price_male}" required></td>
       <td><input data-k="price_female" type="number" min="0" value="${p.price_female}" required></td>
     </tr>`).join('')}</tbody>`;
+  $('dueDay').value = memberData.due_day;
 }
 $('plansForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const plans = [...$('plansTable').querySelectorAll('tbody tr')].map((tr) =>
     Object.fromEntries([...tr.querySelectorAll('input')].map((i) => [i.dataset.k, i.dataset.k === 'limit' && i.value === '' ? null : i.value])));
   try {
-    await App.api('api/admin/membership-plans', { method: 'PUT', body: { plans } });
+    await App.api('api/admin/membership-plans', { method: 'PUT', body: { plans, due_day: $('dueDay').value } });
     App.toast('Plans saved – prices and limits are updated everywhere', 'ok');
     loadMembers();
   } catch (err) { App.toast(err.message, 'error'); }

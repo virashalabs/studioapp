@@ -34,7 +34,8 @@
         </div>
       </div>
       <div class="plan-grid" id="planGrid"></div>
-      <p class="muted" style="font-size:13px;margin-top:12px">Songs are counted per calendar month. If you go past your plan's limit, we'll suggest the next plan up.</p>
+      <p class="muted" style="font-size:13px;margin-top:12px">Songs are counted per calendar month. If you go past your plan's limit, we'll suggest the next plan up.
+        <b id="dueNote">The membership fee is to be paid before the 10th of each month.</b></p>
 
       <div class="panel login-panel" style="margin-top:32px">
         <h3>Member login</h3>
@@ -46,8 +47,8 @@
         </form>
         <p class="muted" style="font-size:13px;margin:12px 0 0">Your member number is on your membership card. Your first PIN is the last 4 digits of your phone number.</p>
         <div class="demo-hint">🧪 <b>Demo logins</b> (PIN <code>1234</code>):<br>
-          <code>RRS1001</code> Ram – over his Basic limit ·
-          <code>RRS1005</code> Arun – 1 song left ·
+          <code>RRS1001</code> Ram – over his Budget limit ·
+          <code>RRS1005</code> Arun – fee overdue ·
           <code>RRS1002</code> Priya – Economy</div>
       </div>
     </div>
@@ -71,6 +72,11 @@
           <div class="meter" id="usageMeter"><span></span></div>
           <div class="muted" id="usageSub" style="font-size:13px"></div>
           <div id="usageAlert" style="margin-top:14px"></div>
+        </div>
+        <div class="panel">
+          <h3>Membership fee</h3>
+          <div id="feeNow"></div>
+          <div id="feeHistory" style="margin-top:12px"></div>
         </div>
       </div>
     </div>
