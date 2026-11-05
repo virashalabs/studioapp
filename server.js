@@ -6,6 +6,7 @@ const crypto = require('node:crypto');
 const express = require('express');
 const { db, getSettings, setSetting, hashPassword, verifyPassword } = require('./db');
 const { sendMail, bookingTable, esc } = require('./mailer');
+const mountMembers = require('./members');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -497,6 +498,9 @@ app.post('/api/admin/password', (req, res) => {
   setSetting('admin_password_hash', hashPassword(req.body.next));
   res.json({ ok: true });
 });
+
+// ---------- membership (singer login + admin member management) ----------
+mountMembers(app, { sign, readCookie, notify, cookiePath: COOKIE_PATH });
 
 // ---------- errors ----------
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));

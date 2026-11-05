@@ -48,6 +48,14 @@ Green = available · amber top half = first half booked · blue bottom half = se
 Revenue = approved bookings (by session date). Mark bookings **paid** to track collected vs outstanding.
 Pending bookings are shown separately as "pipeline".
 
+### Singer membership
+- **Plans** (Admin → Members → *Membership plans & pricing*): Basic / Economy / Premium / Unlimited, each with a monthly song limit and separate male and female prices.
+- **Members** get a number `RRS` + 4 digits and a black-and-gold membership card (shown on screen, downloadable as PNG).
+- **Songs** are logged by the studio (Admin → Members → *+ Songs*, one song per line, optionally `Song – Movie`). Counts reset each calendar month; records older than 12 months are deleted automatically.
+- **Over the limit:** the admin is prompted to upgrade the singer when logging songs, and the singer sees an upgrade prompt and can send an upgrade request from their page.
+- **Singer login** (`member.html`): member number + PIN (default PIN = last 4 digits of the phone). Singers can see their card, monthly usage and song history, and edit their contact details.
+- **Demo data:** six demo singers (RRS1001–RRS1006, PIN `1234`) are created on a fresh start, with songs dated around the current month.
+
 ## Project layout
 
 ```

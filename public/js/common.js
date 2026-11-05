@@ -49,6 +49,7 @@ const App = (() => {
     const links = [
       ['home', './', 'Home'],
       ['book', 'book.html', 'Book a Slot'],
+      ['member', 'member.html', 'Membership'],
       ['events', './#events', 'Upcoming Jams'],
       ['gallery', 'gallery.html', 'Gallery'],
       ['about', 'about.html', 'About Us'],
@@ -70,7 +71,7 @@ const App = (() => {
         </div>
         <nav class="subnav"><div class="wrap">
           ${links.map(([k, href, t]) => `<a href="${href}" class="${k === active ? 'active' : ''}">${t}</a>`).join('')}
-          <span class="right"><a href="book.html#lookup">My Booking</a><a href="admin.html">Studio Admin</a></span>
+          <span class="right"><a href="member.html">Member Login</a><a href="book.html#lookup">My Booking</a><a href="admin.html">Studio Admin</a></span>
         </div></nav>`;
       header.querySelector('.header-search input').addEventListener('change', (e) => e.target.form.submit());
       const root = document.documentElement;

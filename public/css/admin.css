@@ -214,3 +214,12 @@ table.data td b { white-space: nowrap; }
 [data-theme="dark"] .demo-banner div { color: var(--ink-2); }
 [data-theme="dark"] .demo-banner b { color: var(--amber); }
 [data-theme="dark"] .demo-secure { border-top-color: rgba(247,178,74,.3); }
+
+/* Members */
+.member-modal { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 22px; align-items: start; }
+.member-modal .sum-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.member-modal .sum-row span { color: var(--ink-2); }
+.member-modal .sum-row b { text-align: right; font-weight: 500; }
+.plans-edit input { width: 100%; min-width: 90px; border: 1px solid #d5d5d5; border-radius: 6px; padding: 8px 10px; font: inherit; font-size: 14px; background: var(--card); color: var(--ink); }
+[data-theme="dark"] .plans-edit input { border-color: var(--line); }
+@media (max-width: 760px) { .member-modal { grid-template-columns: 1fr; } }

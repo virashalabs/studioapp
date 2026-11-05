@@ -90,11 +90,11 @@ App.api = async (...args) => {
 
 // ---------- navigation ----------
 const TITLES = {
-  dashboard: 'Dashboard', bookings: 'Bookings', calendar: 'Calendar & Free Dates', revenue: 'Revenue',
+  dashboard: 'Dashboard', bookings: 'Bookings', calendar: 'Calendar & Free Dates', members: 'Members & Songs', revenue: 'Revenue',
   banners: 'Banner Management', gallery: 'Gallery', testimonials: 'Testimonials', settings: 'Settings',
 };
 const LOADERS = {
-  dashboard: loadDashboard, bookings: loadBookings, calendar: loadCalendar, revenue: loadRevenue,
+  dashboard: loadDashboard, bookings: loadBookings, calendar: loadCalendar, members: loadMembers, revenue: loadRevenue,
   banners: loadBanners, gallery: loadGallery, testimonials: loadTestimonials, settings: loadSettings,
 };
 
@@ -177,7 +177,7 @@ $('bell').onclick = async (e) => {
   if (!pop.classList.contains('hidden')) return pop.classList.add('hidden');
   const items = state.notifs || [];
   pop.innerHTML = `<h4>Notifications</h4>` + (items.map((n) => `
-    <div class="notif-item ${n.read ? '' : 'unread'}">${n.type === 'booking' ? '🎸' : '💬'} ${esc(n.message)}
+    <div class="notif-item ${n.read ? '' : 'unread'}">${n.type === 'booking' ? '🎸' : n.type === 'membership' ? '🎤' : '💬'} ${esc(n.message)}
       <small>${new Date(n.created_at.replace(' ', 'T') + 'Z').toLocaleString('en-IN')}</small></div>`).join('') || '<div class="empty">No notifications yet</div>');
   pop.classList.remove('hidden');
   if (items.some((n) => !n.read)) {
@@ -193,6 +193,7 @@ async function refreshCounts() {
   const [stats, testis] = await Promise.all([App.api('api/admin/stats'), App.api('api/admin/testimonials')]).catch(() => [null, null]);
   if (stats) $('pendingCount').textContent = stats.pending || '';
   if (testis) $('reviewCount').textContent = testis.filter((t) => !t.approved).length || '';
+  App.api('api/admin/members').then((d) => { $('memberAlertCount').textContent = d.members.filter((m) => m.requested).length || ''; }).catch(() => {});
 }
 
 // ---------- booking table + actions ----------
@@ -720,6 +721,254 @@ $('pwForm').addEventListener('submit', async (e) => {
     await App.api('api/admin/password', { method: 'POST', body: Object.fromEntries(new FormData(e.target)) });
     e.target.reset();
     App.toast('Password updated', 'ok');
+  } catch (err) { App.toast(err.message, 'error'); }
+});
+
+// ---------- members & songs ----------
+let memberData = { members: [], plans: [] };
+const fmtShort = (d) => App.fmtDate(d, { day: 'numeric', month: 'short', year: 'numeric' });
+const monthLabel = (ym, opts = { month: 'long', year: 'numeric' }) => new Date(ym + '-01T00:00').toLocaleDateString('en-IN', opts);
+const planPrice = (p, gender) => Number(gender === 'Female' ? p.price_female : p.price_male) || 0;
+const limitLabel = (l) => (l == null ? 'Unlimited' : `${l} songs`);
+const GENDERS = ['Male', 'Female'];
+
+function usageCell(m) {
+  const lim = m.plan_limit;
+  const pct = lim == null ? 100 : Math.min(100, (m.month_count / lim) * 100);
+  const cls = m.over_limit ? 'over' : m.remaining != null && m.remaining <= 3 ? 'warn' : '';
+  return `<div style="min-width:130px"><b>${m.month_count}</b> <span class="muted">/ ${lim == null ? '∞' : lim}</span>
+    <div class="meter ${cls}" style="margin:5px 0 0;height:6px"><span style="width:${pct}%"></span></div></div>`;
+}
+function memberFlags(m) {
+  return [
+    m.requested ? `<span class="pill pending" title="The singer asked for this upgrade">🙋 Wants ${esc(m.requested.name)}</span>` : '',
+    m.over_limit && m.suggested && !m.requested ? `<span class="pill cancelled">⚠ Over limit · suggest ${esc(m.suggested.name)}</span>` : '',
+    !m.active ? '<span class="pill unpaid">Expired</span>' : '',
+  ].join(' ');
+}
+
+async function loadMembers() {
+  memberData = await App.api('api/admin/members');
+  const ms = memberData.members;
+  const kpi = (label, value, sub = '', attention = false) => `<div class="kpi ${attention ? 'attention' : ''}"><div class="label">${label}</div><div class="value">${value}</div><div class="sub">${sub}</div></div>`;
+  const over = ms.filter((m) => m.over_limit).length, reqs = ms.filter((m) => m.requested).length;
+  $('memberKpis').innerHTML = kpi('Members', ms.length, `${ms.filter((m) => m.active).length} active`)
+    + kpi('Songs this month', ms.reduce((a, m) => a + m.month_count, 0), monthLabel(memberData.month))
+    + kpi('Over their limit', over, 'Prompt to upgrade', over > 0)
+    + kpi('Upgrade requests', reqs, 'From the singer portal', reqs > 0);
+  drawMembers();
+  drawPlansForm();
+}
+
+function drawMembers() {
+  const q = $('mSearch').value.trim().toLowerCase(), g = $('mGender').value, f = $('mFilter').value;
+  const list = memberData.members.filter((m) =>
+    (!q || [m.name, m.member_no, m.phone].some((v) => String(v || '').toLowerCase().includes(q)))
+    && (!g || m.gender === g)
+    && (!f || (f === 'over' && m.over_limit) || (f === 'requests' && m.requested) || (f === 'expired' && !m.active)));
+  $('memberTable').innerHTML = list.length ? `<table class="data"><thead><tr><th>Member</th><th>Gender</th><th>Plan</th><th>This month</th><th>Valid until</th><th></th></tr></thead><tbody>
+    ${list.map((m) => `<tr>
+      <td><a href="#" data-mview="${m.id}"><b>${esc(m.name)}</b></a><br><small class="muted">${esc(m.member_no)} · ${esc(m.phone)}</small></td>
+      <td>${esc(m.gender)}</td>
+      <td><b>${esc(m.plan_name)}</b><br><small class="muted">${money(m.plan_price)} / month</small></td>
+      <td>${usageCell(m)}</td>
+      <td style="white-space:nowrap">${fmtShort(m.valid_until)}<br>${memberFlags(m)}</td>
+      <td><div class="actions"><button class="btn btn-ghost btn-sm" data-mview="${m.id}">View</button><button class="btn btn-primary btn-sm" data-msongs="${m.id}">+ Songs</button></div></td>
+    </tr>`).join('')}</tbody></table>` : '<div class="empty">No members match.</div>';
+}
+['mSearch', 'mGender', 'mFilter'].forEach((id) => $(id).addEventListener('input', drawMembers));
+$('memberTable').addEventListener('click', (e) => {
+  const v = e.target.closest('[data-mview]'), s = e.target.closest('[data-msongs]');
+  if (v) { e.preventDefault(); openMember(Number(v.dataset.mview)); }
+  if (s) logSongs(memberData.members.find((m) => m.id === Number(s.dataset.msongs)));
+});
+
+async function changePlan(m, planKey) {
+  const p = memberData.plans.find((x) => x.key === planKey);
+  await App.api(`api/admin/members/${m.id}`, { method: 'PUT', body: { plan: planKey } });
+  App.toast(`${m.name} is now on ${p.name} (${money(planPrice(p, m.gender))} / month)`, 'ok');
+}
+// After songs are logged: if the singer is now over their limit, offer the next plan.
+async function promptUpgrade(m) {
+  if (!m.over_limit || !m.suggested) return false;
+  const s = m.suggested;
+  App.toast(`⚠ ${m.name} has sung ${m.month_count} songs this month – over the ${m.plan_name} limit of ${m.plan_limit}.`, 'error');
+  if (!confirm(`${m.name} has crossed the ${m.plan_name} limit (${m.month_count} of ${m.plan_limit} songs this month).\n\nUpgrade to ${s.name} – ${limitLabel(s.limit)} / month for ${money(s.price)}?`)) return false;
+  await changePlan(m, s.key);
+  return true;
+}
+
+function logSongs(m, after) {
+  const today = App.ymd(new Date());
+  modal(`Log songs – ${esc(m.name)} (${esc(m.member_no)})`, `
+    <div class="form-grid">
+      <div class="field"><label>Date sung</label><input type="date" name="sung_on" value="${today}" max="${today}" required></div>
+      <div class="field"><label>This month so far</label><div class="readonly-val">${m.month_count} of ${m.plan_limit == null ? 'unlimited' : m.plan_limit} songs (${esc(m.plan_name)})</div></div>
+      <div class="field full"><label>Songs – one per line, optionally “Song – Movie/Album”</label>
+        <textarea name="songs" required style="min-height:160px" placeholder="Ilaya Nila – Payanangal Mudivathillai&#10;Munbe Vaa – Sillunu Oru Kaadhal&#10;Vaseegara"></textarea></div>
+    </div>`, { submitText: 'Save songs', onSubmit: async (f) => {
+    const songs = f.songs.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => {
+      const [title, ...rest] = l.split(/\s+[–—-]\s+/);
+      return { title: title.trim(), album: rest.join(' - ').trim() };
+    });
+    if (!songs.length) { App.toast('Add at least one song', 'error'); return false; }
+    const r = await App.api(`api/admin/members/${m.id}/songs`, { method: 'POST', body: { sung_on: f.sung_on, songs } });
+    App.toast(`${r.added} song${r.added === 1 ? '' : 's'} logged for ${m.name}`, 'ok');
+    const done = () => { reload(); if (after) after(); };
+    // The plan limit applies to the current month, so only prompt for songs logged in it.
+    if (r.member.month === memberData.month) setTimeout(() => promptUpgrade(r.member).catch((e) => App.toast(e.message, 'error')).finally(done), 50);
+    else done();
+  } });
+}
+
+function memberForm(m = null) {
+  const plans = memberData.plans, gender = m ? m.gender : 'Male';
+  const opt = (g) => plans.map((p) => `<option value="${p.key}" ${(m ? m.plan : 'basic') === p.key ? 'selected' : ''}>${esc(p.name)} – ${limitLabel(p.limit)} – ${money(planPrice(p, g))}</option>`).join('');
+  const v = (k) => esc(m && m[k] ? m[k] : '');
+  const genderOpts = GENDERS.map((g) => `<option ${g === gender ? 'selected' : ''}>${g}</option>`).join('');
+  const extra = m
+    ? `<div class="field"><label>Valid until</label><input name="valid_until" type="date" value="${v('valid_until')}"></div>
+       <div class="field"><label>Reset PIN (optional)</label><input name="pin" inputmode="numeric" maxlength="6" placeholder="4–6 digits"></div>`
+    : `<div class="field"><label>Start date</label><input name="start_date" type="date" value="${App.ymd(new Date())}"></div>
+       <div class="field"><label>PIN</label><input name="pin" inputmode="numeric" maxlength="6" placeholder="Default: last 4 digits of phone"></div>`;
+  const { el } = modal(m ? `Edit ${esc(m.name)}` : 'New member', `
+    <div class="form-grid">
+      <div class="field"><label>Full name <span class="req">*</span></label><input name="name" required maxlength="80" value="${v('name')}"></div>
+      <div class="field"><label>Gender <span class="req">*</span></label><select name="gender">${genderOpts}</select></div>
+      <div class="field"><label>Contact number <span class="req">*</span></label><input name="phone" type="tel" required maxlength="20" value="${v('phone')}"></div>
+      <div class="field"><label>Email</label><input name="email" type="email" maxlength="120" value="${v('email')}"></div>
+      <div class="field"><label>Date of birth</label><input name="dob" type="date" value="${v('dob')}"></div>
+      <div class="field"><label>Address</label><input name="address" maxlength="300" value="${v('address')}"></div>
+      <div class="field full"><label>Membership plan</label><select name="plan" id="planSel">${opt(gender)}</select></div>
+      ${extra}
+    </div>`, { submitText: m ? 'Save' : 'Create member', wide: true, onSubmit: async (f) => {
+    if (m) {
+      await App.api(`api/admin/members/${m.id}`, { method: 'PUT', body: f });
+      App.toast('Member updated', 'ok');
+      reload();
+      openMember(m.id);
+    } else {
+      const r = await App.api('api/admin/members', { method: 'POST', body: f });
+      reload();
+      await openMember(r.id);
+      App.toast(`Member ${r.member_no} created – login PIN ${r.pin}`, 'ok');
+    }
+  } });
+  // Prices in the plan list follow the selected gender.
+  const g = el.querySelector('[name=gender]'), sel = el.querySelector('#planSel');
+  g.addEventListener('change', () => { const keep = sel.value; sel.innerHTML = opt(g.value); sel.value = keep; });
+}
+$('newMember').onclick = () => memberForm();
+
+let memberModal = null;
+async function openMember(id, month) {
+  const d = await App.api(`api/admin/members/${id}`);
+  const m = d.member;
+  const studio = (state.settings && state.settings.studio_name) || 'Rhythm Rehearsal Studio';
+  month = month && d.months.some((x) => x.month === month) ? month : d.months[0].month;
+  const songs = d.songs.filter((s) => s.sung_on.startsWith(month)).slice().reverse(); // oldest first
+  const lim = month === m.month ? m.plan_limit : null;
+  const row = (k, val) => `<div class="sum-row"><span>${k}</span><b>${val}</b></div>`;
+  const target = m.requested || m.suggested;
+  let alert = '';
+  if (m.over_limit && target) {
+    alert = `<div class="alert alert-error upgrade-box" style="margin:12px 0 0">
+      <span>⚠ ${m.month_count - m.plan_limit} over the ${esc(m.plan_name)} limit${m.requested ? ` · singer asked for <b>${esc(m.requested.name)}</b>` : ''}.</span>
+      <button type="button" class="btn btn-primary btn-sm" data-act="upgrade" data-plan="${esc(target.key)}">Upgrade to ${esc(target.name)} · ${money(target.price)}</button></div>`;
+  } else if (m.requested) {
+    alert = `<div class="alert alert-warn upgrade-box" style="margin:12px 0 0"><span>🙋 Singer asked for <b>${esc(m.requested.name)}</b>.</span>
+      <button type="button" class="btn btn-primary btn-sm" data-act="upgrade" data-plan="${esc(m.requested.key)}">Upgrade · ${money(m.requested.price)}</button></div>`;
+  }
+  const songRows = songs.map((s, i) => `<tr class="${lim != null && i >= lim ? 'over' : ''}"><td class="n">${i + 1}</td>
+      <td style="white-space:nowrap">${App.fmtDate(s.sung_on, { day: 'numeric', month: 'short' })}</td>
+      <td><b>${esc(s.title)}</b></td><td class="muted">${esc(s.album || '–')}</td>
+      <td><button type="button" class="btn btn-ghost btn-sm" data-delsong="${s.id}" title="Remove" style="color:var(--red)">×</button></td></tr>`).join('');
+  const body = `
+    <div class="member-modal">
+      <div>
+        ${MemberCard.html(m, studio)}
+        <div class="actions" style="margin-top:12px"><button type="button" class="btn btn-outline btn-sm" data-act="card">⬇ Download card</button></div>
+      </div>
+      <div>
+        ${row('Member no.', esc(m.member_no))}
+        ${row('Gender', esc(m.gender))}
+        ${row('Contact', `${esc(m.phone)}${m.email ? `<br><small class="muted">${esc(m.email)}</small>` : ''}`)}
+        ${row('Plan', `${esc(m.plan_name)} · ${money(m.plan_price)} / month`)}
+        ${row('Valid', `${fmtShort(m.start_date)} – ${fmtShort(m.valid_until)} ${m.active ? '' : '<span class="pill unpaid">Expired</span>'}`)}
+        <div style="margin-top:12px"><span class="muted" style="font-size:13px">This month (${monthLabel(m.month)})</span>${usageCell(m)}</div>
+        ${alert}
+        <div class="actions" style="margin-top:14px">
+          <button type="button" class="btn btn-primary btn-sm" data-act="songs">+ Log songs</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-act="edit">Edit details / plan</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-act="renew">Renew 1 month</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-act="delete" style="color:var(--red)">Delete</button>
+        </div>
+      </div>
+    </div>
+    <h4 style="margin:22px 0 10px">Songs sung <span class="muted" style="font-weight:400">· ${d.total} in the last 12 months (records kept 12 months)</span></h4>
+    <div class="month-chips">${d.months.map((x) => `<button type="button" class="chip ${x.month === month ? 'on' : ''}" data-month="${x.month}">${monthLabel(x.month, { month: 'short', year: '2-digit' })} <small>${x.count}</small></button>`).join('')}</div>
+    ${songs.length ? `<table class="song-list"><thead><tr><th>#</th><th>Date</th><th>Song</th><th>Movie / Album</th><th></th></tr></thead><tbody>${songRows}</tbody></table>`
+      : `<div class="empty">No songs in ${monthLabel(month)}.</div>`}`;
+
+  if (memberModal && document.body.contains(memberModal.el)) {
+    memberModal.el.querySelector('.modal-head h3').textContent = `${m.name} · ${m.member_no}`;
+    memberModal.el.querySelector('.modal-body').innerHTML = body;
+  } else {
+    memberModal = modal(esc(`${m.name} · ${m.member_no}`), body, { wide: true });
+    memberModal.el.querySelector('.modal').style.maxWidth = '880px';
+  }
+  memberModal.el.onclick = async (e) => {
+    const t = e.target.closest('button');
+    if (!t || t.hasAttribute('data-close')) return;
+    try {
+      if (t.dataset.month) return openMember(id, t.dataset.month);
+      if (t.dataset.delsong) {
+        if (!confirm('Remove this song from the record?')) return;
+        await App.api(`api/admin/members/${id}/songs/${t.dataset.delsong}`, { method: 'DELETE' });
+        reload();
+        return openMember(id, month);
+      }
+      switch (t.dataset.act) {
+        case 'card': return MemberCard.download(m, studio);
+        case 'songs': return logSongs(m, () => openMember(id));
+        case 'edit': memberModal.close(); return memberForm(m);
+        case 'upgrade': await changePlan(m, t.dataset.plan); reload(); return openMember(id, month);
+        case 'renew': {
+          const r = await App.api(`api/admin/members/${id}/renew`, { method: 'POST' });
+          App.toast(`Renewed – valid until ${fmtShort(r.valid_until)}`, 'ok');
+          reload();
+          return openMember(id, month);
+        }
+        case 'delete':
+          if (!confirm(`Delete ${m.name} (${m.member_no}) and all their song records?`)) return;
+          await App.api(`api/admin/members/${id}`, { method: 'DELETE' });
+          memberModal.close();
+          App.toast('Member deleted', 'ok');
+          return reload();
+        default: return undefined;
+      }
+    } catch (err) { App.toast(err.message, 'error'); }
+  };
+}
+
+function drawPlansForm() {
+  const plans = memberData.plans, last = plans.length - 1;
+  $('plansTable').innerHTML = `<thead><tr><th>Plan name</th><th>Songs / month</th><th>Male price (${esc(cur())})</th><th>Female price (${esc(cur())})</th></tr></thead><tbody>
+    ${plans.map((p, i) => `<tr>
+      <td><input data-k="name" value="${esc(p.name)}" maxlength="30" required></td>
+      <td><input data-k="limit" type="number" min="1" value="${p.limit == null ? '' : p.limit}" ${i === last ? 'placeholder="Unlimited"' : 'required'}></td>
+      <td><input data-k="price_male" type="number" min="0" value="${p.price_male}" required></td>
+      <td><input data-k="price_female" type="number" min="0" value="${p.price_female}" required></td>
+    </tr>`).join('')}</tbody>`;
+}
+$('plansForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const plans = [...$('plansTable').querySelectorAll('tbody tr')].map((tr) =>
+    Object.fromEntries([...tr.querySelectorAll('input')].map((i) => [i.dataset.k, i.dataset.k === 'limit' && i.value === '' ? null : i.value])));
+  try {
+    await App.api('api/admin/membership-plans', { method: 'PUT', body: { plans } });
+    App.toast('Plans saved – prices and limits are updated everywhere', 'ok');
+    loadMembers();
   } catch (err) { App.toast(err.message, 'error'); }
 });
 

@@ -672,3 +672,61 @@ a.slide { display: block; }
 .gallery-item::before { inset: -24px; background-size: cover; filter: blur(18px) brightness(.75); }
 .gallery-item::after { inset: 0; background-size: contain; background-position: center; background-color: transparent; }
 .gallery-item span { z-index: 1; }
+
+/* ===== Membership card (black matte, gold lettering) ===== */
+.mcard {
+  --gold: linear-gradient(120deg, #c89a3e 0%, #f9e6a8 38%, #ddb45c 62%, #a87d30 100%);
+  position: relative; width: 100%; max-width: 440px; aspect-ratio: 1012 / 638; border-radius: 18px; overflow: hidden;
+  background: #0c0c0d; color: #e8d296; padding: 6.5% 6.3%; display: flex; flex-direction: column; justify-content: space-between;
+  box-shadow: 0 18px 40px rgba(0,0,0,.45), inset 0 0 0 1px rgba(232,200,120,.35); font-family: 'Cinzel', Georgia, serif;
+  container-type: inline-size;
+}
+.mcard::before { content: ''; position: absolute; inset: 2.2%; border: 1px solid rgba(214,176,92,.55); border-radius: 12px; pointer-events: none; }
+.mcard-sheen { position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 90% at 15% -25%, rgba(255,255,255,.10), transparent 60%),
+              repeating-linear-gradient(45deg, rgba(255,255,255,.012) 0 2px, transparent 2px 4px); }
+.mcard .gold { background: var(--gold); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.mcard-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; position: relative; }
+.mcard-brand { font-weight: 700; font-size: 4.1cqw; letter-spacing: .08em; text-transform: uppercase; line-height: 1.15; }
+.mcard-title { font-size: 2.5cqw; letter-spacing: .32em; text-transform: uppercase; margin-top: 4px; }
+.mcard-emblem { font-family: Georgia, serif; font-size: 7cqw; line-height: 1; }
+.mcard-no { font-weight: 700; font-size: 7.6cqw; letter-spacing: .14em; position: relative; }
+.mcard-bottom { display: grid; grid-template-columns: 1fr auto auto; gap: 6cqw; align-items: end; position: relative; }
+.mcard-bottom small { display: block; font-family: 'Roboto', sans-serif; font-size: 1.75cqw; letter-spacing: .25em; text-transform: uppercase; color: rgba(232,210,150,.55); margin-bottom: 3px; }
+.mcard-bottom b { display: block; font-size: 3.4cqw; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcard-bottom div:not(.mcard-name) { text-align: right; }
+.mcard-name { min-width: 0; }
+
+/* ===== Membership page ===== */
+.plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.plan-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 22px 20px; display: flex; flex-direction: column; gap: 6px; }
+.plan-card h3 { margin: 0; font-size: 18px; }
+.plan-card .price { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.plan-card .price small { font-size: 14px; font-weight: 400; color: var(--muted); }
+.plan-card .songs { color: var(--ink-2); }
+.plan-card.current { border-color: #c99b3f; box-shadow: 0 0 0 1px #c99b3f inset; }
+.plan-card .tag { align-self: flex-start; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 10px; background: rgba(201,155,63,.16); color: #b8892d; }
+.member-layout { display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); gap: 24px; align-items: start; }
+.member-layout > * { min-width: 0; }
+.usage-big { font-size: 40px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+.usage-big small { font-size: 16px; font-weight: 400; color: var(--muted); }
+.meter { height: 10px; border-radius: 6px; background: var(--line); overflow: hidden; margin: 12px 0 6px; }
+.meter > span { display: block; height: 100%; border-radius: 6px; background: var(--green); }
+.meter.warn > span { background: var(--amber); }
+.meter.over > span { background: var(--accent); }
+.alert-warn { background: var(--amber-bg); color: #8a5a00; }
+[data-theme="dark"] .alert-warn { color: var(--amber); }
+[data-theme="dark"] .alert-ok { color: var(--green); }
+.upgrade-box { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.month-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 14px; }
+.month-chips .chip { white-space: nowrap; flex: none; }
+.song-list { width: 100%; border-collapse: collapse; font-size: 14px; }
+.song-list th { text-align: left; font-weight: 500; color: var(--ink-2); font-size: 12px; text-transform: uppercase; letter-spacing: .4px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.song-list td { padding: 9px 10px; border-bottom: 1px solid var(--line); }
+.song-list td.n { color: var(--muted); width: 36px; font-variant-numeric: tabular-nums; }
+.song-list tr.over td { background: rgba(248,68,100,.06); }
+.login-panel { max-width: 420px; }
+.demo-hint { font-size: 13px; color: var(--ink-2); background: var(--surface-2, #f5f5f5); border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 14px; }
+.demo-hint code { font-weight: 700; color: var(--ink); }
+.readonly-val { padding: 10px 12px; border: 1px dashed var(--line); border-radius: 6px; color: var(--ink-2); font-size: 14px; }
+@media (max-width: 900px) { .member-layout { grid-template-columns: 1fr; } }

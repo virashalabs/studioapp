@@ -73,6 +73,34 @@ CREATE TABLE IF NOT EXISTS testimonials (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS members (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  member_no       TEXT UNIQUE NOT NULL,          -- RRS + 4 digits
+  name            TEXT NOT NULL,
+  gender          TEXT NOT NULL CHECK (gender IN ('Male','Female')),
+  phone           TEXT NOT NULL,
+  email           TEXT,
+  dob             TEXT,
+  address         TEXT,
+  plan            TEXT NOT NULL,                 -- tier key from the membership_plans setting
+  start_date      TEXT NOT NULL,
+  valid_until     TEXT NOT NULL,
+  upgrade_request TEXT,                          -- tier key the singer asked to move to
+  pin_hash        TEXT NOT NULL,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- One row per song a member sang. Kept for 12 months (older rows are purged by the server).
+CREATE TABLE IF NOT EXISTS member_songs (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  member_id  INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  sung_on    TEXT NOT NULL,                      -- YYYY-MM-DD
+  title      TEXT NOT NULL,
+  album      TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_member_songs ON member_songs(member_id, sung_on);
+
 CREATE TABLE IF NOT EXISTS notifications (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   type       TEXT NOT NULL,
@@ -145,6 +173,13 @@ const DEFAULT_SETTINGS = {
   ]),
   admin_demo_mode: '1', // demo site: admin dashboard opens without a password
   gallery_categories: 'Live Room, Audio System, Mixing Desk, Green Room Lounge, Pantry Area, Events',
+  // Membership tiers: songs per calendar month (null = unlimited) and monthly price for male / female singers.
+  membership_plans: JSON.stringify([
+    { key: 'basic', name: 'Basic', limit: 20, price_male: 1500, price_female: 1200 },
+    { key: 'economy', name: 'Economy', limit: 30, price_male: 2000, price_female: 1700 },
+    { key: 'premium', name: 'Premium', limit: 45, price_male: 3000, price_female: 2500 },
+    { key: 'unlimited', name: 'Unlimited', limit: null, price_male: 4000, price_female: 3500 },
+  ]),
   instagram: 'https://instagram.com',
   youtube: 'https://youtube.com',
 };
@@ -189,6 +224,51 @@ function seed() {
     ins.run('Arjun Menon', 'The Backbenchers', 'Best-sounding room in the city. The drum kit is always tuned and the AC actually works! We rehearse here every week.', 5);
     ins.run('Priya Sharma', 'Harmony Choir', 'We booked a full day for our concert prep – spacious, clean and the staff helped us set up the mics. Booking online took a minute.', 5);
     ins.run('Rohit & Friends', 'Birthday Jam', 'Celebrated my birthday with a jam session here. Mood lighting, great sound and zero hassle. Highly recommend!', 4);
+  }
+
+  if (db.prepare('SELECT COUNT(*) AS n FROM members').get().n === 0) seedMembers();
+}
+
+// Demo singers, created on every fresh start with songs dated around today so "this month" always has data.
+function seedMembers() {
+  const SONGS = [
+    ['Ilaya Nila', 'Payanangal Mudivathillai'], ['Munbe Vaa', 'Sillunu Oru Kaadhal'], ['Vaseegara', 'Minnale'],
+    ['Snehithane', 'Alaipayuthey'], ['Kadhal Rojave', 'Roja'], ['Uyire Uyire', 'Bombay'],
+    ['Nenjukkul Peidhidum', 'Vaaranam Aayiram'], ['Why This Kolaveri Di', '3'], ['Kannaana Kanney', 'Viswasam'],
+    ['Thalli Pogathey', 'Achcham Yenbadhu Madamaiyada'], ['Pachai Nirame', 'Alaipayuthey'], ['Ennavale Adi Ennavale', 'Kadhalan'],
+    ['Mukkala Mukkabala', 'Kadhalan'], ['Putham Pudhu Kaalai', 'Alaigal Oivathillai'], ['Sundari Kannal', 'Thalapathi'],
+    ['Raja Raja Chozhan', 'Rettai Vaal Kuruvi'], ['Anjali Anjali', 'Duet'], ['Poongatru Puthithanathu', 'Moondram Pirai'],
+    ['Kannalane', 'Bombay'], ['Vennilave Vennilave', 'Minsara Kanavu'], ['Nila Kaigirathu', 'Indira'],
+    ['Thendral Vanthu', 'Avatharam'], ['Unakkenna Venum Sollu', 'Yennai Arindhaal'], ['Pookkalae Sattru Oyivedungal', 'I'],
+    ['Kanave Kanave', 'David'], ['Oru Naalil', 'Pudhupettai'], ['Mannil Indha Kadhal', 'Keladi Kanmani'],
+  ];
+  const pad = (n) => String(n).padStart(2, '0');
+  const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const today = new Date();
+  const addDays = (n) => { const d = new Date(today); d.setDate(d.getDate() + n); return ymd(d); };
+  // n songs spread over the days of a month (monthsAgo = 0 is this month, up to today).
+  const datesIn = (monthsAgo, n) => {
+    const first = new Date(today.getFullYear(), today.getMonth() - monthsAgo, 1);
+    const last = monthsAgo === 0 ? today.getDate() : new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+    return Array.from({ length: n }, (_, i) => ymd(new Date(first.getFullYear(), first.getMonth(), 1 + Math.floor((i * last) / n))));
+  };
+  const insM = db.prepare(`INSERT INTO members (member_no, name, gender, phone, email, dob, address, plan, start_date, valid_until, upgrade_request, pin_hash)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`);
+  const insS = db.prepare('INSERT INTO member_songs (member_id, sung_on, title, album) VALUES (?,?,?,?)');
+  const pin = hashPassword('1234');
+  const demo = [
+    // member_no, name, gender, phone, email, plan, upgrade request, songs per month [this month, 1 ago, 2 ago, ...]
+    ['RRS1001', 'Ram Kumar', 'Male', '+91 98400 11223', 'ram.kumar@example.com', 'basic', null, [22, 18, 20, 16, 19]],
+    ['RRS1002', 'Priya Lakshmi', 'Female', '+91 98410 22334', 'priya.l@example.com', 'economy', null, [14, 27, 25, 22]],
+    ['RRS1003', 'Karthik Raja', 'Male', '+91 98420 33445', 'karthik.r@example.com', 'premium', null, [31, 40, 44, 38, 29, 35]],
+    ['RRS1004', 'Meena Sundar', 'Female', '+91 98430 44556', 'meena.s@example.com', 'unlimited', null, [52, 61, 48]],
+    ['RRS1005', 'Arun Prakash', 'Male', '+91 98440 55667', 'arun.p@example.com', 'basic', null, [19, 12]],
+    ['RRS1006', 'Divya Ramesh', 'Female', '+91 98450 66778', 'divya.r@example.com', 'basic', 'economy', [24, 20]],
+  ];
+  let k = 0;
+  for (const [no, name, gender, phone, email, plan, req, months] of demo) {
+    const id = insM.run(no, name, gender, phone, email, null, 'Chennai', plan, addDays(-12), addDays(18), req, pin).lastInsertRowid;
+    months.forEach((n, ago) => datesIn(ago, n).forEach((d) => { const [t, a] = SONGS[k++ % SONGS.length]; insS.run(id, d, t, a); }));
   }
 }
 seed();
