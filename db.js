@@ -184,12 +184,18 @@ const DEFAULT_SETTINGS = {
   ]),
   admin_demo_mode: '1', // demo site: admin dashboard opens without a password
   gallery_categories: 'Live Room, Audio System, Mixing Desk, Green Room Lounge, Pantry Area, Events',
-  // Membership tiers: songs per calendar month (null = unlimited) and monthly price for male / female singers.
+  // Membership tiers, separate for male and female singers: songs per calendar month (null = unlimited) and monthly price.
+  // Within each gender the plans are ordered from smallest to largest.
   membership_plans: JSON.stringify([
-    { key: 'basic', name: 'Budget', limit: 20, price_male: 1500, price_female: 1200 },
-    { key: 'economy', name: 'Economy', limit: 30, price_male: 2500, price_female: 1700 },
-    { key: 'premium', name: 'Premium', limit: 40, price_male: 3500, price_female: 2500 },
-    { key: 'unlimited', name: 'Unlimited', limit: null, price_male: 4000, price_female: 3500 },
+    { key: 'basic', gender: 'Male', name: 'Budget', limit: 20, price: 1500 },
+    { key: 'economy', gender: 'Male', name: 'Economy', limit: 30, price: 2500 },
+    { key: 'premium', gender: 'Male', name: 'Premium', limit: 40, price: 3500 },
+    { key: 'unlimited', gender: 'Male', name: 'Unlimited', limit: null, price: 4000 },
+    { key: 'f_basic', gender: 'Female', name: 'Budget', limit: 20, price: 1000 },
+    { key: 'f_economy', gender: 'Female', name: 'Economy', limit: 25, price: 1500 },
+    { key: 'f_standard', gender: 'Female', name: 'Standard', limit: 35, price: 2500 },
+    { key: 'f_premium', gender: 'Female', name: 'Premium', limit: 50, price: 3000 },
+    { key: 'f_elite', gender: 'Female', name: 'Elite', limit: 100, price: 4000 },
   ]),
   membership_due_day: '10', // monthly fee must be paid by this day of the month
   instagram: 'https://instagram.com',
@@ -276,17 +282,17 @@ function seedMembers() {
     // member_no, name, gender, phone, email, plan, upgrade request, songs per month [this month, 1 ago, 2 ago, ...],
     // unpaid months (0 = this month, 1 = last month; every other month since joining is paid)
     ['RRS1001', 'Ram Kumar', 'Male', '+91 98400 11223', 'ram.kumar@example.com', 'basic', null, [22, 18, 20, 16, 19], []],
-    ['RRS1002', 'Priya Lakshmi', 'Female', '+91 98410 22334', 'priya.l@example.com', 'economy', null, [14, 27, 25, 22], []],
+    ['RRS1002', 'Priya Lakshmi', 'Female', '+91 98410 22334', 'priya.l@example.com', 'f_standard', null, [14, 27, 25, 22], []],
     ['RRS1003', 'Karthik Raja', 'Male', '+91 98420 33445', 'karthik.r@example.com', 'premium', null, [31, 38, 36, 38, 29, 35], [0]],
-    ['RRS1004', 'Meena Sundar', 'Female', '+91 98430 44556', 'meena.s@example.com', 'unlimited', null, [52, 61, 48], []],
+    ['RRS1004', 'Meena Sundar', 'Female', '+91 98430 44556', 'meena.s@example.com', 'f_elite', null, [52, 61, 48], []],
     ['RRS1005', 'Arun Prakash', 'Male', '+91 98440 55667', 'arun.p@example.com', 'basic', null, [19, 12, 15], [0, 1]],
-    ['RRS1006', 'Divya Ramesh', 'Female', '+91 98450 66778', 'divya.r@example.com', 'basic', 'economy', [24, 20], []],
+    ['RRS1006', 'Divya Ramesh', 'Female', '+91 98450 66778', 'divya.r@example.com', 'f_basic', 'f_economy', [24, 20], []],
   ];
   let k = 0;
   const paidDay = (ago) => (ago === 0 ? Math.min(3, today.getDate()) : 5);
   for (const [no, name, gender, phone, email, plan, req, months, unpaid] of demo) {
     const tier = plans.find((p) => p.key === plan);
-    const price = gender === 'Female' ? tier.price_female : tier.price_male;
+    const price = tier.price;
     const paidAgo = months.map((_, ago) => ago).filter((ago) => !unpaid.includes(ago));
     // Valid through the end of the latest paid month (or the joining month if nothing is paid yet).
     const validUntil = monthEnd(paidAgo.length ? Math.min(...paidAgo) : months.length - 1);
@@ -296,6 +302,27 @@ function seedMembers() {
   }
 }
 seed();
+migrateGenderPlans();
+
+// Older databases had one plan list with a male and a female price per plan. Female singers now have their own
+// tariff (different song limits), so switch to the per-gender list and move each female singer to the female plan
+// that covers at least the songs her old plan allowed.
+function migrateGenderPlans() {
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'membership_plans'").get();
+  let list = [];
+  try { list = JSON.parse(row.value); } catch { /* replaced below */ }
+  if (Array.isArray(list) && list.length && list.every((p) => p.gender)) return;
+  db.prepare("UPDATE settings SET value = ? WHERE key = 'membership_plans'").run(DEFAULT_SETTINGS.membership_plans);
+  const toFemale = { basic: 'f_basic', economy: 'f_standard', premium: 'f_premium', unlimited: 'f_elite' };
+  const order = JSON.parse(DEFAULT_SETTINGS.membership_plans).filter((p) => p.gender === 'Female').map((p) => p.key);
+  const female = db.prepare("SELECT id, plan, upgrade_request FROM members WHERE gender = 'Female'").all();
+  const upd = db.prepare('UPDATE members SET plan = ?, upgrade_request = ? WHERE id = ?');
+  for (const m of female) {
+    const plan = toFemale[m.plan] || 'f_basic';
+    // A pending upgrade request becomes a request for the next female plan up.
+    upd.run(plan, m.upgrade_request ? order[order.indexOf(plan) + 1] || null : null, m.id);
+  }
+}
 
 function getSettings() {
   const rows = db.prepare('SELECT key, value FROM settings').all();

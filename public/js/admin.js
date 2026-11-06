@@ -728,7 +728,8 @@ $('pwForm').addEventListener('submit', async (e) => {
 let memberData = { members: [], plans: [] };
 const fmtShort = (d) => App.fmtDate(d, { day: 'numeric', month: 'short', year: 'numeric' });
 const monthLabel = (ym, opts = { month: 'long', year: 'numeric' }) => new Date(ym + '-01T00:00').toLocaleDateString('en-IN', opts);
-const planPrice = (p, gender) => Number(gender === 'Female' ? p.price_female : p.price_male) || 0;
+const planPrice = (p) => Number(p.price) || 0;
+const plansOf = (g) => memberData.plans.filter((p) => p.gender === g);
 const limitLabel = (l) => (l == null ? 'Unlimited' : `${l} songs`);
 const GENDERS = ['Male', 'Female'];
 
@@ -811,7 +812,7 @@ async function markPaid(m, month) {
 async function changePlan(m, planKey) {
   const p = memberData.plans.find((x) => x.key === planKey);
   await App.api(`api/admin/members/${m.id}`, { method: 'PUT', body: { plan: planKey } });
-  App.toast(`${m.name} is now on ${p.name} (${money(planPrice(p, m.gender))} / month)`, 'ok');
+  App.toast(`${m.name} is now on ${p.name} (${money(planPrice(p))} / month)`, 'ok');
 }
 // After songs are logged: if the singer is now over their limit, offer the next plan.
 async function promptUpgrade(m) {
@@ -848,8 +849,9 @@ function logSongs(m, after) {
 }
 
 function memberForm(m = null) {
-  const plans = memberData.plans, gender = m ? m.gender : 'Male';
-  const opt = (g) => plans.map((p) => `<option value="${p.key}" ${(m ? m.plan : 'basic') === p.key ? 'selected' : ''}>${esc(p.name)} – ${limitLabel(p.limit)} – ${money(planPrice(p, g))}</option>`).join('');
+  const gender = m ? m.gender : 'Male';
+  // Each gender has its own tariff, so the plan list follows the selected gender.
+  const opt = (g) => plansOf(g).map((p) => `<option value="${p.key}" ${m && m.plan === p.key ? 'selected' : ''}>${esc(p.name)} – ${limitLabel(p.limit)} – ${money(planPrice(p))}</option>`).join('');
   const v = (k) => esc(m && m[k] ? m[k] : '');
   const genderOpts = GENDERS.map((g) => `<option ${g === gender ? 'selected' : ''}>${g}</option>`).join('');
   const extra = m
@@ -881,9 +883,9 @@ function memberForm(m = null) {
       App.toast(`Member ${r.member_no} created – login PIN ${r.pin}`, 'ok');
     }
   } });
-  // Prices in the plan list follow the selected gender.
+  // Switching gender swaps in that gender's plans; keep the same position in the list (e.g. Budget -> Budget).
   const g = el.querySelector('[name=gender]'), sel = el.querySelector('#planSel');
-  g.addEventListener('change', () => { const keep = sel.value; sel.innerHTML = opt(g.value); sel.value = keep; });
+  g.addEventListener('change', () => { const i = sel.selectedIndex; sel.innerHTML = opt(g.value); sel.selectedIndex = Math.min(Math.max(i, 0), sel.options.length - 1); });
 }
 $('newMember').onclick = () => memberForm();
 
@@ -986,20 +988,22 @@ async function openMember(id, month) {
 }
 
 function drawPlansForm() {
-  const plans = memberData.plans, last = plans.length - 1;
-  $('plansTable').innerHTML = `<thead><tr><th>Plan name</th><th>Songs / month</th><th>Male price (${esc(cur())})</th><th>Female price (${esc(cur())})</th></tr></thead><tbody>
-    ${plans.map((p, i) => `<tr>
+  const group = (g) => {
+    const list = plansOf(g), last = list.length - 1;
+    return `<tr class="plans-group"><th colspan="3">${g} singers</th></tr>` + list.map((p, i) => `<tr data-key="${esc(p.key)}">
       <td><input data-k="name" value="${esc(p.name)}" maxlength="30" required></td>
       <td><input data-k="limit" type="number" min="1" value="${p.limit == null ? '' : p.limit}" ${i === last ? 'placeholder="Unlimited"' : 'required'}></td>
-      <td><input data-k="price_male" type="number" min="0" value="${p.price_male}" required></td>
-      <td><input data-k="price_female" type="number" min="0" value="${p.price_female}" required></td>
-    </tr>`).join('')}</tbody>`;
+      <td><input data-k="price" type="number" min="0" value="${p.price}" required></td>
+    </tr>`).join('');
+  };
+  $('plansTable').innerHTML = `<thead><tr><th>Plan name</th><th>Songs / month</th><th>Price / month (${esc(cur())})</th></tr></thead><tbody>
+    ${GENDERS.map(group).join('')}</tbody>`;
   $('dueDay').value = memberData.due_day;
 }
 $('plansForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const plans = [...$('plansTable').querySelectorAll('tbody tr')].map((tr) =>
-    Object.fromEntries([...tr.querySelectorAll('input')].map((i) => [i.dataset.k, i.dataset.k === 'limit' && i.value === '' ? null : i.value])));
+  const plans = [...$('plansTable').querySelectorAll('tbody tr[data-key]')].map((tr) => ({ key: tr.dataset.key,
+    ...Object.fromEntries([...tr.querySelectorAll('input')].map((i) => [i.dataset.k, i.dataset.k === 'limit' && i.value === '' ? null : i.value])) }));
   try {
     await App.api('api/admin/membership-plans', { method: 'PUT', body: { plans, due_day: $('dueDay').value } });
     App.toast('Plans saved – prices and limits are updated everywhere', 'ok');

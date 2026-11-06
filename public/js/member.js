@@ -6,15 +6,16 @@ let cur = '₹', plans = [], data = null, month = null;
 
 function ordinal(n) { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
 const monthName = (ym, opts = { month: 'long', year: 'numeric' }) => new Date(ym + '-01T00:00').toLocaleDateString('en-IN', opts);
-const price = (p, gender) => App.money(gender === 'Female' ? p.price_female : p.price_male, cur);
+const price = (p) => App.money(p.price, cur);
 const songsText = (limit) => (limit == null ? 'Unlimited songs' : `Up to ${limit} songs / month`);
 
+// Male and female singers have separate plans (different song limits and prices).
 function drawPlans(gender, currentKey = null) {
-  $('planGrid').innerHTML = plans.map((p) => `
+  $('planGrid').innerHTML = plans.filter((p) => p.gender === gender).map((p) => `
     <div class="plan-card ${p.key === currentKey ? 'current' : ''}">
       ${p.key === currentKey ? '<span class="tag">Your plan</span>' : ''}
       <h3>${esc(p.name)}</h3>
-      <div class="price">${price(p, gender)} <small>/ month</small></div>
+      <div class="price">${price(p)} <small>/ month</small></div>
       <div class="songs">🎤 ${songsText(p.limit)}</div>
     </div>`).join('');
 }

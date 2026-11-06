@@ -222,4 +222,5 @@ table.data td b { white-space: nowrap; }
 .member-modal .sum-row b { text-align: right; font-weight: 500; }
 .plans-edit input { width: 100%; min-width: 90px; border: 1px solid #d5d5d5; border-radius: 6px; padding: 8px 10px; font: inherit; font-size: 14px; background: var(--card); color: var(--ink); }
 [data-theme="dark"] .plans-edit input { border-color: var(--line); }
+.plans-edit .plans-group th { text-align: left; padding-top: 16px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 @media (max-width: 760px) { .member-modal { grid-template-columns: 1fr; } }

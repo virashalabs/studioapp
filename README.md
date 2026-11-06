@@ -49,7 +49,7 @@ Revenue = approved bookings (by session date). Mark bookings **paid** to track c
 Pending bookings are shown separately as "pipeline".
 
 ### Singer membership
-- **Plans** (Admin → Members → *Membership plans & pricing*): Budget / Economy / Premium / Unlimited, each with a monthly song limit and separate male and female prices.
+- **Plans** (Admin → Members → *Membership plans & pricing*): separate tariffs for male singers (Budget 20 songs ₹1500 / Economy 30 ₹2500 / Premium 40 ₹3500 / Unlimited ₹4000) and female singers (Budget 20 ₹1000 / Economy 25 ₹1500 / Standard 35 ₹2500 / Premium 50 ₹3000 / Elite 100 ₹4000), each with a monthly song limit and price.
 - **Monthly fee** must be paid before the 10th (configurable); from the 10th an unpaid fee is overdue. Admin marks each month paid; paying a month extends validity to its end. Overdue fees show to the admin and the singer; after an upgrade the price difference shows as a balance.
 - **Members** get a number `RRS` + 4 digits and a black-and-gold membership card (shown on screen, downloadable as PNG).
 - **Songs** are logged by the studio (Admin → Members → *+ Songs*, one song per line, optionally `Song – Movie`). Counts reset each calendar month; records older than 12 months are deleted automatically.

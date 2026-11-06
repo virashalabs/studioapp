@@ -29,9 +29,11 @@ function getPlans() {
   } catch { /* fall through */ }
   return [];
 }
-const priceOf = (tier, gender) => Number(gender === 'Female' ? tier.price_female : tier.price_male) || 0;
+// Male and female singers have separate tariffs; each gender's plans are ordered from smallest to largest.
+const plansFor = (gender, plans = getPlans()) => plans.filter((p) => p.gender === gender);
+const priceOf = (tier) => Number(tier && tier.price) || 0;
 
-// Smallest plan that covers `count` songs (plans are ordered from smallest to largest).
+// Smallest plan that covers `count` songs (pass one gender's plans).
 function planCovering(plans, count) {
   return plans.find((p) => p.limit == null || count <= p.limit) || plans[plans.length - 1];
 }
@@ -62,7 +64,7 @@ function fees(m, tier) {
   for (let ym = now; ym >= first; ym = prevMonth(ym)) {
     const row = paid[ym];
     // This month is charged at the current plan; past months at what was paid (or the current price if unpaid).
-    const amount = ym === now || !row ? priceOf(tier, m.gender) : row.amount;
+    const amount = ym === now || !row ? priceOf(tier) : row.amount;
     const balance = Math.max(0, amount - (row ? row.amount : 0));
     const due_date = `${ym}-${day}`;
     const late = ym < now || t >= due_date; // due_date itself is already late ("pay before the 10th")
@@ -83,13 +85,14 @@ function monthCount(memberId, ym = thisMonth()) {
   return db.prepare("SELECT COUNT(*) n FROM member_songs WHERE member_id = ? AND substr(sung_on,1,7) = ?").get(memberId, ym).n;
 }
 
-function summary(m, plans = getPlans(), ym = thisMonth()) {
+function summary(m, allPlans = getPlans(), ym = thisMonth()) {
+  const plans = plansFor(m.gender, allPlans);
   const tier = plans.find((p) => p.key === m.plan) || plans[0];
   const count = monthCount(m.id, ym);
   const idx = plans.indexOf(tier);
   const covering = planCovering(plans, count);
   const over = tier.limit != null && count > tier.limit;
-  const tierView = (t) => t && { key: t.key, name: t.name, limit: t.limit, price: priceOf(t, m.gender) };
+  const tierView = (t) => t && { key: t.key, name: t.name, limit: t.limit, price: priceOf(t) };
   const req = m.upgrade_request && plans.find((p) => p.key === m.upgrade_request);
   const { pin_hash, ...pub } = m;
   const feeList = fees(m, tier);
@@ -98,7 +101,7 @@ function summary(m, plans = getPlans(), ym = thisMonth()) {
     ...pub,
     plan_name: tier.name,
     plan_limit: tier.limit,
-    plan_price: priceOf(tier, m.gender),
+    plan_price: priceOf(tier),
     month: ym,
     month_count: count,
     remaining: tier.limit == null ? null : Math.max(0, tier.limit - count),
@@ -176,7 +179,7 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
   });
 
   app.get('/api/member/me', requireMember, (req, res) => {
-    res.json({ member: summary(req.member), ...history(req.member.id), plans: getPlans() });
+    res.json({ member: summary(req.member), ...history(req.member.id), plans: plansFor(req.member.gender) });
   });
 
   // Singers update their own contact / demographic details. Gender and plan are set by the studio (they decide the price).
@@ -197,7 +200,7 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
   });
 
   app.post('/api/member/upgrade-request', requireMember, (req, res) => {
-    const m = req.member, plans = getPlans();
+    const m = req.member, plans = plansFor(m.gender);
     const target = plans.find((p) => p.key === req.body.plan);
     if (!target || plans.indexOf(target) <= plans.findIndex((p) => p.key === m.plan)) return fail(res, 400, 'Please pick a higher plan.');
     db.prepare('UPDATE members SET upgrade_request = ? WHERE id = ?').run(target.key, m.id);
@@ -223,7 +226,7 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
     const name = clean(b.name, 80), phone = clean(b.phone, 20);
     if (!name || !phone) throw Object.assign(new Error('Name and contact number are required.'), { status: 400 });
     if (!GENDERS.includes(b.gender)) throw Object.assign(new Error('Please choose Male or Female.'), { status: 400 });
-    if (!plans.some((p) => p.key === b.plan)) throw Object.assign(new Error('Please choose a membership plan.'), { status: 400 });
+    if (!plansFor(b.gender, plans).some((p) => p.key === b.plan)) throw Object.assign(new Error(`Please choose a ${b.gender.toLowerCase()} membership plan.`), { status: 400 });
     if (b.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(b.email)) throw Object.assign(new Error('Please enter a valid email.'), { status: 400 });
     return { name, phone, gender: b.gender, plan: b.plan, email: clean(b.email, 120) || null,
       dob: DATE_RE.test(b.dob || '') ? b.dob : null, address: clean(b.address, 300) || null };
@@ -240,7 +243,7 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
     // Joining-month fee collected at sign-up.
     if (req.body.paid) {
       const tier = getPlans().find((p) => p.key === f.plan);
-      db.prepare('INSERT INTO member_payments (member_id, month, plan, amount, paid_on) VALUES (?,?,?,?,?)').run(id, start.slice(0, 7), f.plan, priceOf(tier, f.gender), today());
+      db.prepare('INSERT INTO member_payments (member_id, month, plan, amount, paid_on) VALUES (?,?,?,?,?)').run(id, start.slice(0, 7), f.plan, priceOf(tier), today());
     }
     res.json({ ok: true, id, member_no: no, pin });
   });
@@ -264,10 +267,10 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
     if (!m) return fail(res, 404, 'Member not found.');
     const ym = MONTH_RE.test(req.body.month || '') ? req.body.month : thisMonth();
     if (ym > thisMonth() || ym < m.start_date.slice(0, 7)) return fail(res, 400, 'That month is outside this membership.');
-    const tier = getPlans().find((p) => p.key === m.plan) || getPlans()[0];
+    const tier = getPlans().find((p) => p.key === m.plan) || plansFor(m.gender)[0];
     db.prepare(`INSERT INTO member_payments (member_id, month, plan, amount, paid_on) VALUES (?,?,?,?,?)
       ON CONFLICT(member_id, month) DO UPDATE SET plan = excluded.plan, amount = excluded.amount, paid_on = excluded.paid_on`)
-      .run(m.id, ym, m.plan, priceOf(tier, m.gender), today());
+      .run(m.id, ym, m.plan, priceOf(tier), today());
     refreshValidity(m);
     res.json({ ok: true, member: summary(getMember(m.id)) });
   });
@@ -307,17 +310,21 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
   app.put('/api/admin/membership-plans', (req, res) => {
     const old = getPlans();
     const list = Array.isArray(req.body.plans) ? req.body.plans : [];
-    if (list.length !== old.length) return fail(res, 400, 'All plans must be included.');
-    let prev = 0;
-    const next = old.map((o, i) => {
-      const p = list[i] || {};
-      const limit = p.limit === null || p.limit === '' ? null : Math.round(Number(p.limit));
-      if (limit !== null && !(limit > prev)) throw Object.assign(new Error('Song limits must go up from one plan to the next.'), { status: 400 });
-      if (limit === null && i !== old.length - 1) throw Object.assign(new Error('Only the last plan can be unlimited.'), { status: 400 });
-      if (limit !== null) prev = limit;
-      return { key: o.key, name: clean(p.name, 30) || o.name, limit,
-        price_male: Math.max(0, Number(p.price_male) || 0), price_female: Math.max(0, Number(p.price_female) || 0) };
-    });
+    const byKey = Object.fromEntries(list.map((p) => [p && p.key, p]));
+    if (!old.every((o) => byKey[o.key])) return fail(res, 400, 'All plans must be included.');
+    const next = [];
+    for (const g of GENDERS) {
+      const group = plansFor(g, old);
+      let prev = 0;
+      group.forEach((o, i) => {
+        const p = byKey[o.key];
+        const limit = p.limit === null || p.limit === '' ? null : Math.round(Number(p.limit));
+        if (limit !== null && !(limit > prev)) throw Object.assign(new Error(`${g} plans: song limits must go up from one plan to the next.`), { status: 400 });
+        if (limit === null && i !== group.length - 1) throw Object.assign(new Error(`${g} plans: only the last plan can be unlimited.`), { status: 400 });
+        if (limit !== null) prev = limit;
+        next.push({ key: o.key, gender: g, name: clean(p.name, 30) || o.name, limit, price: Math.max(0, Number(p.price) || 0) });
+      });
+    }
     setSetting('membership_plans', JSON.stringify(next));
     if (req.body.due_day !== undefined) {
       const d = Math.round(Number(req.body.due_day));
