@@ -59,7 +59,7 @@ const App = (() => {
       header.className = 'site-header';
       header.innerHTML = `
         <div class="wrap header-top">
-          <a href="./" class="logo"><span class="logo-mark">🎸</span><span><span data-s="studio_name">Studio</span><small>Rehearsal & Jam Studio</small></span></a>
+          <a href="./" class="logo"><img class="logo-mark" src="img/logo-mark.png" alt=""><span><span data-s="studio_name">Studio</span><small>Rehearsal & Jam Studio</small></span></a>
           <form class="header-search" action="book.html">
             <input type="date" name="date" aria-label="Check availability for a date" title="Check availability for a date">
           </form>
@@ -94,7 +94,7 @@ const App = (() => {
         </div></div>
         <div class="wrap footer-grid">
           <div>
-            <h4 data-s="studio_name"></h4>
+            <img class="footer-logo" src="img/logo.png" alt="Rhythm Rehearsal Studio" width="220" height="131">
             <p data-s="tagline"></p>
             <p>📍 <span data-s="address"></span><br>📞 <a data-tel><span data-s="phone"></span></a><br>✉️ <a data-mail><span data-s="email"></span></a></p>
           </div>
