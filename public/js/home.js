@@ -39,42 +39,38 @@ function renderCarousel(banners, s) {
     </div>`).join('');
   dots.innerHTML = slides.map((_, i) => `<button aria-label="Banner ${i + 1}" data-i="${i}"></button>`).join('');
 
-  // Infinite loop: three copies of the slides; we always sit in the middle copy and
-  // silently jump by one copy-length after a transition crosses into the outer copies.
-  const n = slides.length;
-  const originals = track.innerHTML;
-  if (n > 1) track.innerHTML = originals + originals + originals;
+  // Premium crossfade: slides are stacked; the active one fades in with a slow zoom and a light sheen,
+  // and its dot fills up as a progress bar until the next banner.
+  const n = slides.length, HOLD = 5000;
+  const carousel = track.parentElement;
+  carousel.classList.add('fx');
+  carousel.style.setProperty('--hold', HOLD + 'ms');
   const items = [...track.children];
-  let pos = n > 1 ? n : 0, timer;
+  let pos = 0, timer;
 
-  const place = (animate) => {
-    const el = items[pos];
-    const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
-    const x = pos * (el.offsetWidth + gap) - (track.parentElement.clientWidth - el.offsetWidth) / 2;
-    track.style.transition = animate ? 'transform .6s cubic-bezier(.4,0,.2,1)' : 'none';
-    track.style.transform = `translateX(${-x}px)`;
-    items.forEach((s, j) => s.classList.toggle('active', j === pos));
-    dots.querySelectorAll('button').forEach((d, j) => d.classList.toggle('on', j === pos % n));
+  const show = (i) => {
+    pos = (i + n) % n;
+    items.forEach((el, j) => {
+      const on = j === pos;
+      if (el.classList.contains('active') && !on) { el.classList.add('leaving'); setTimeout(() => el.classList.remove('leaving'), 1200); }
+      el.classList.toggle('active', on);
+      el.setAttribute('aria-hidden', String(!on));
+      el.tabIndex = on ? 0 : -1;
+    });
+    dots.querySelectorAll('button').forEach((d, j) => {
+      d.classList.remove('on');
+      if (j === pos) { void d.offsetWidth; d.classList.add('on'); } // restart the fill animation
+    });
   };
-  track.addEventListener('transitionend', (e) => {
-    if (e.target !== track) return;
-    if (pos >= 2 * n) { pos -= n; place(false); }
-    else if (pos < n) { pos += n; place(false); }
-  });
-  // Snap back into the middle copy if a transitionend was missed (e.g. tab was in the background).
-  const normalize = () => {
-    if (n < 2 || (pos >= n && pos < 2 * n)) return;
-    pos = n + (((pos - n) % n) + n) % n;
-    place(false);
-    void track.offsetWidth; // flush so the next move animates from the snapped position
-  };
-  const step = (d) => { normalize(); pos += d; place(true); };
-  const goTo = (i) => { normalize(); pos = n + i; place(true); };
-  const restart = () => { clearInterval(timer); if (n > 1) timer = setInterval(() => step(1), 2000); };
+  const step = (d) => show(pos + d);
+  const restart = () => { clearInterval(timer); if (n > 1) timer = setInterval(() => step(1), HOLD); };
 
   document.querySelector('.carousel-btn.prev').onclick = () => { step(-1); restart(); };
   document.querySelector('.carousel-btn.next').onclick = () => { step(1); restart(); };
-  dots.onclick = (e) => { if (e.target.dataset.i) { goTo(Number(e.target.dataset.i)); restart(); } };
+  dots.onclick = (e) => { if (e.target.dataset.i) { show(Number(e.target.dataset.i)); restart(); } };
+  // Pause while the pointer is over the banner
+  carousel.addEventListener('mouseenter', () => { clearInterval(timer); carousel.classList.add('paused'); });
+  carousel.addEventListener('mouseleave', () => { carousel.classList.remove('paused'); show(pos); restart(); });
 
   // Swipe on touch screens
   let startX = null;
@@ -86,10 +82,8 @@ function renderCarousel(banners, s) {
     restart();
   });
 
-  window.addEventListener('resize', () => place(false));
-  track.querySelectorAll('img').forEach((img) => img.addEventListener('load', () => place(false), { once: true }));
   if (n < 2) document.querySelectorAll('.carousel-btn, #dots').forEach((el) => el.classList.add('hidden'));
-  place(false);
+  show(0);
   restart();
 }
 

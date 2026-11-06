@@ -643,6 +643,56 @@ a.slide { display: block; }
 /* Show the whole banner (no trimming): height follows the 1280×446 shape at full strip width */
 .slide.slide-poster img, .slide.slide-text { height: auto; aspect-ratio: 1280 / 446; object-fit: cover; }
 
+/* ===== Premium banner transitions: stacked crossfade, slow zoom, sheen sweep, progress dots ===== */
+.carousel.fx .carousel-track { display: grid; transform: none !important; transition: none; }
+.carousel.fx .slide {
+  grid-area: 1 / 1; position: relative; overflow: hidden; opacity: 0; visibility: hidden; z-index: 0;
+  transition: opacity 1.1s cubic-bezier(.4, 0, .2, 1), visibility 0s linear 1.1s;
+}
+.carousel.fx .slide.active { opacity: 1; visibility: visible; z-index: 2; transition: opacity 1.1s cubic-bezier(.4, 0, .2, 1), visibility 0s; }
+.carousel.fx .slide.leaving { visibility: visible; z-index: 1; }
+/* Ken Burns: the banner settles from a gentle zoom while it is on screen */
+.carousel.fx .slide > img, .carousel.fx .slide-text { transform-origin: 50% 45%; }
+.carousel.fx .slide.active > img { animation: bnr-zoom calc(var(--hold) + 1.2s) ease-out both; }
+.carousel.fx .slide.leaving > img { transform: scale(1); }
+@keyframes bnr-zoom { from { transform: scale(1.08); } to { transform: scale(1); } }
+/* Text banners: content rises in after the fade */
+.carousel.fx .slide.active .slide-content > * { animation: bnr-rise .8s cubic-bezier(.2, .7, .2, 1) both; }
+.carousel.fx .slide.active .slide-content > :nth-child(2) { animation-delay: .12s; }
+.carousel.fx .slide.active .slide-content > :nth-child(3) { animation-delay: .24s; }
+.carousel.fx .slide.active .slide-content > :nth-child(4) { animation-delay: .36s; }
+@keyframes bnr-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+/* Golden sheen sweeping across once as each banner arrives */
+.carousel.fx .slide::before {
+  content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 214, 90, .22) 48%, rgba(255, 255, 255, .28) 50%, transparent 62%);
+  transform: translateX(-100%);
+}
+.carousel.fx .slide.active::before { animation: bnr-sheen 1.6s .5s cubic-bezier(.4, 0, .2, 1) both; }
+@keyframes bnr-sheen { 0% { opacity: 1; transform: translateX(-100%); } 100% { opacity: 1; transform: translateX(100%); } }
+/* Soft vignette for depth */
+.carousel.fx .slide::after {
+  content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none; display: block;
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, .28);
+}
+/* Dots: the active one fills like a progress bar */
+.dots button { position: relative; overflow: hidden; transition: width .4s ease, background .3s; }
+.hero .dots button.on { width: 34px; background: rgba(128, 128, 128, .35); }
+.dots button.on::after {
+  content: ''; position: absolute; inset: 0; background: #ffd23f; transform-origin: left; transform: scaleX(0);
+  animation: bnr-progress var(--hold, 5000ms) linear forwards;
+}
+.hero:has(.carousel.paused) .dots button.on::after { animation-play-state: paused; }
+@keyframes bnr-progress { to { transform: scaleX(1); } }
+.carousel.fx.paused .slide.active > img { animation-play-state: paused; }
+.carousel-btn { transition: opacity .3s, background .2s, transform .2s; }
+.carousel-btn:hover { transform: translateY(-50%) scale(1.08); }
+@media (prefers-reduced-motion: reduce) {
+  .carousel.fx .slide, .carousel.fx .slide.active { transition: opacity .3s; }
+  .carousel.fx .slide.active > img, .carousel.fx .slide.active::before,
+  .carousel.fx .slide.active .slide-content > *, .dots button.on::after { animation: none; }
+}
+
 /* ===== Gallery sections ===== */
 .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; }
 .chip {
