@@ -11,18 +11,22 @@ if (process.env.SMTP_HOST) {
   });
 }
 
+// Returns true when the email was handed to the mail server.
 async function sendMail({ to, subject, html }) {
-  if (!to) return;
+  if (!to) return false;
   if (!transporter) {
     console.log(`\n[mail:not-configured] To: ${to}\nSubject: ${subject}\n${html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()}\n`);
-    return;
+    return false;
   }
   try {
     await transporter.sendMail({ from: process.env.MAIL_FROM || process.env.SMTP_USER, to, subject, html });
+    return true;
   } catch (err) {
     console.error('[mail] failed to send:', err.message);
+    return false;
   }
 }
+const mailReady = () => !!transporter;
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
@@ -43,4 +47,4 @@ function bookingTable(b, slotText, currency) {
     </table>`;
 }
 
-module.exports = { sendMail, bookingTable, esc };
+module.exports = { sendMail, mailReady, bookingTable, esc };

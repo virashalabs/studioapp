@@ -78,6 +78,15 @@ $('loginForm').addEventListener('submit', async (e) => {
   }
 });
 
+$('forgotLink').onclick = async (e) => {
+  e.preventDefault();
+  if (!confirm('Send a password reset link to the admin email?')) return;
+  try {
+    const r = await App.api('api/admin/forgot', { method: 'POST' });
+    alert(`A reset link has been sent to ${r.to}.\n\nOpen the email and tap "Set a new admin password". The link works for 30 minutes. Check the spam folder if you don't see it.`);
+  } catch (err) { alert(err.message); }
+};
+
 $('logout').onclick = async () => {
   await App.api('api/admin/logout', { method: 'POST' });
   location.reload();

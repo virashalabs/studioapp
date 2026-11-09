@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const crypto = require('node:crypto');
 const express = require('express');
 const { db, getSettings, setSetting, hashPassword, verifyPassword } = require('./db');
-const { sendMail, bookingTable, esc } = require('./mailer');
+const { sendMail, mailReady, bookingTable, esc } = require('./mailer');
 const mountMembers = require('./members');
 const mountEvents = require('./events');
 const persist = require('./persist');
@@ -291,6 +291,44 @@ app.post('/api/admin/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+// Forgot password: a one-time link (valid 30 minutes) is emailed to the admin email in Settings.
+// Only a hash of the token is stored; using the link sets a new admin password.
+let lastResetMail = 0;
+const maskEmail = (e) => String(e).replace(/^(.)(.*)(@.*)$/, (_, a, b, c) => a + '*'.repeat(Math.min(6, b.length)) + c);
+app.post('/api/admin/forgot', wrap(async (req, res) => {
+  const s = getSettings();
+  const to = s.admin_email || s.owner_email || s.email;
+  if (!mailReady()) return res.status(503).json({ error: 'Email isn\'t set up on this website yet, so a reset link can\'t be sent. Ask the superadmin to reset the admin password.' });
+  if (Date.now() - lastResetMail < 2 * 60 * 1000) return res.status(429).json({ error: 'A reset link was just sent – please check your email (and the spam folder) or try again in 2 minutes.' });
+  lastResetMail = Date.now();
+  const token = crypto.randomBytes(32).toString('hex');
+  setSetting('admin_reset', JSON.stringify({ hash: crypto.createHash('sha256').update(token).digest('hex'), exp: Date.now() + 30 * 60 * 1000 }));
+  const base = `${req.get('x-forwarded-proto') || req.protocol}://${req.get('host')}${COOKIE_PATH}`;
+  const link = `${base}admin-reset.html?token=${token}`;
+  const sent = await sendMail({
+    to,
+    subject: `${s.studio_name}: reset your admin password`,
+    html: `<p>Someone asked to reset the admin password for <b>${esc(s.studio_name)}</b>.</p>
+      <p><a href="${link}" style="display:inline-block;background:#f84464;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Set a new admin password</a></p>
+      <p>This link works once and expires in 30 minutes. If you didn't ask for this, ignore this email – your password stays the same.</p>`,
+  });
+  if (!sent) return res.status(502).json({ error: 'The reset email could not be sent. Please try again later or ask the superadmin.' });
+  res.json({ ok: true, to: maskEmail(to) });
+}));
+app.post('/api/admin/reset', (req, res) => {
+  let r = null;
+  try { r = JSON.parse(getSettings().admin_reset || 'null'); } catch { r = null; }
+  const hash = crypto.createHash('sha256').update(String(req.body.token || '')).digest('hex');
+  if (!r || r.exp < Date.now() || hash.length !== r.hash.length || !crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(r.hash))) {
+    return res.status(400).json({ error: 'This reset link has expired or was already used. Ask for a new one from the login page.' });
+  }
+  if (String(req.body.next || '').length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+  setSetting('admin_password_hash', hashPassword(String(req.body.next)));
+  setSetting('admin_reset', '');
+  loginFails.clear();
+  res.json({ ok: true });
+});
+
 app.get('/api/admin/me', (req, res) => res.json({ admin: isAdmin(req), super: isSuper(req), demo: getSettings().admin_demo_mode === '1' }));
 
 app.use('/api/admin', requireAdmin);
@@ -525,11 +563,11 @@ app.delete('/api/admin/testimonials/:id', (req, res) => {
 
 // Settings
 app.get('/api/admin/settings', (req, res) => {
-  const { admin_password_hash, superadmin_password_hash, ...rest } = getSettings();
+  const { admin_password_hash, superadmin_password_hash, admin_reset, ...rest } = getSettings();
   res.json(rest);
 });
 app.put('/api/admin/settings', (req, res) => {
-  const allowed = [...PUBLIC_SETTINGS, 'owner_email', 'admin_demo_mode'];
+  const allowed = [...PUBLIC_SETTINGS, 'owner_email', 'admin_email', 'admin_demo_mode'];
   for (const k of allowed) if (req.body[k] !== undefined) setSetting(k, String(req.body[k]).slice(0, 5000));
   res.json({ ok: true });
 });

@@ -223,6 +223,7 @@ const DEFAULT_SETTINGS = {
   whatsapp: '919962258845',
   email: 'rhythmmusicals2024@gmail.com',
   owner_email: '',
+  admin_email: 'rythmrehearsalstudio@gmail.com', // "Forgot password" reset links for the admin go here
   address: '91C, 11th West Street, Metha Nagar, Kundrathur, Chennai, Tamil Nadu 600069',
   map_link: 'https://www.google.com/maps/search/?api=1&query=Rhythm+Rehearsal+Studio+Kundrathur+Chennai+600069',
   currency: '₹',

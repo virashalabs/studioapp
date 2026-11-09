@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem("sb-theme")||"dark"}catch(e){}</script>
+  <title>Reset Admin Password</title>
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="img/favicon-32.png">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="app-body">
+  <main class="app-login">
+    <div class="app-login-top">
+      <img src="img/admin-app-192.png" alt="" width="72" height="72" class="app-login-logo">
+      <h1>Reset admin password</h1>
+      <p>Rhythm Rehearsal Studio</p>
+    </div>
+    <form class="app-card" id="resetForm" novalidate>
+      <div id="msg" class="alert alert-error hidden"></div>
+      <label class="ev-label" for="p1">New admin password</label>
+      <input class="ev-input" id="p1" type="password" minlength="6" autocomplete="new-password" placeholder="At least 6 characters">
+      <label class="ev-label" for="p2">Type it again</label>
+      <input class="ev-input" id="p2" type="password" minlength="6" autocomplete="new-password">
+      <button class="btn btn-primary btn-lg btn-block" style="margin-top:16px">Set new password</button>
+    </form>
+    <div class="app-card hidden" id="done">
+      <h2>✅ Password changed</h2>
+      <p>Log in with username <b>admin</b> and your new password.</p>
+      <a class="btn btn-primary btn-block" href="admin.html">Go to admin login</a>
+      <a class="btn btn-ghost btn-block" href="admin-app.html" style="margin-top:8px">Open the admin app</a>
+    </div>
+  </main>
+  <script src="js/common.js"></script>
+  <script>
+    const token = new URLSearchParams(location.search).get('token') || '';
+    const msg = document.getElementById('msg');
+    const show = (t) => { msg.textContent = t; msg.classList.remove('hidden'); };
+    if (!token) show('This page needs the link from the reset email. Use "Forgot password?" on the admin login.');
+    App.eyes(document.getElementById('resetForm'));
+    document.getElementById('resetForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const a = document.getElementById('p1').value, b = document.getElementById('p2').value;
+      if (a.length < 6) return show('Password must be at least 6 characters.');
+      if (a !== b) return show('The two passwords don\'t match.');
+      try {
+        await App.api('api/admin/reset', { method: 'POST', body: { token, next: a } });
+        e.target.classList.add('hidden');
+        document.getElementById('done').classList.remove('hidden');
+        history.replaceState(null, '', location.pathname);
+      } catch (err) { show(err.message); }
+      return undefined;
+    });
+  </script>
+</body>
+</html>
