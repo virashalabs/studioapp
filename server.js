@@ -146,6 +146,7 @@ const PUBLIC_SETTINGS = [
   'attractions', 'instagram', 'youtube', 'gallery_categories', 'upi_id', 'upi_name',
   'show_membership', 'show_weekly_event',
 ];
+const SUPER_ONLY_SETTINGS = ['show_membership', 'show_weekly_event', 'admin_demo_mode'];
 
 app.get('/api/settings', (req, res) => {
   const s = getSettings();
@@ -273,7 +274,8 @@ app.post('/api/admin/login', (req, res) => {
   const user = String(req.body.username || '').trim().toLowerCase(), pw = String(req.body.password || '');
   const superOk = user === 'superadmin' && !!s.superadmin_password_hash && verifyPassword(pw, s.superadmin_password_hash);
   const userOk = user === String(s.admin_username || 'admin').toLowerCase();
-  if (!superOk && !demo && !(userOk && verifyPassword(pw, s.admin_password_hash))) {
+  // A wrong superadmin password is always refused (demo mode only lets the plain admin in without one).
+  if (!superOk && (user === 'superadmin' || (!demo && !(userOk && verifyPassword(pw, s.admin_password_hash))))) {
     // Count failures within a 15-minute window that starts at the first one.
     const fresh = !f || now - f.since > 15 * 60 * 1000;
     const n = (fresh ? 0 : f.n) + 1;
@@ -569,7 +571,15 @@ app.get('/api/admin/settings', (req, res) => {
 });
 app.put('/api/admin/settings', (req, res) => {
   const allowed = [...PUBLIC_SETTINGS, 'owner_email', 'admin_email', 'admin_demo_mode'];
-  for (const k of allowed) if (req.body[k] !== undefined) setSetting(k, String(req.body[k]).slice(0, 5000));
+  // Feature switches and demo mode belong to the superadmin: on the demo site the admin needs no password.
+  const s = getSettings();
+  if (!isSuper(req) && SUPER_ONLY_SETTINGS.some((k) => req.body[k] !== undefined && String(req.body[k]) !== String(s[k] ?? ''))) {
+    return res.status(403).json({ error: 'Only the superadmin can change this.' });
+  }
+  for (const k of allowed) {
+    if (req.body[k] === undefined || (SUPER_ONLY_SETTINGS.includes(k) && !isSuper(req))) continue;
+    setSetting(k, String(req.body[k]).slice(0, 5000));
+  }
   res.json({ ok: true });
 });
 app.post('/api/admin/password', (req, res) => {

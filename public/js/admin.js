@@ -54,6 +54,10 @@ async function boot() {
   state.demo = demo;
   // Superadmin: everything the admin has, plus the password panel in Settings.
   $('superCard').classList.toggle('hidden', !sup);
+  // Feature switches and demo mode: superadmin only (disabled fields are left out of the settings save).
+  $('featuresCard').classList.toggle('hidden', !sup);
+  $('featuresCard').querySelectorAll('select').forEach((el) => { el.disabled = !sup; });
+  $('demoCard').classList.toggle('hidden', !sup);
   if (sup) loadClearOpts();
   $('superBadge').classList.toggle('hidden', !sup);
   $('demoNote').classList.toggle('hidden', !demo);

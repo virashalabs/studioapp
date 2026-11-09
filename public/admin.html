@@ -272,8 +272,8 @@
                 <div class="field" style="margin-top:12px"><label>About text</label><textarea name="about_text" style="min-height:200px"></textarea></div>
                 <div class="field" style="margin-top:12px"><label>Gallery sections (comma-separated, in display order)</label><input name="gallery_categories" placeholder="Live Room, Audio System, Mixing Desk, …"></div>
               </div>
-              <div class="card">
-                <h3>Features</h3>
+              <div class="card hidden" id="featuresCard">
+                <h3>Features <span class="pill" style="background:var(--accent);color:#fff;font-size:11px;vertical-align:middle">🛡️ Superadmin</span></h3>
                 <p class="muted" style="font-size:13px;margin:0 0 12px">Studio-specific sections. When hidden, they disappear from the website, admin and admin-app menus; nothing is deleted.</p>
                 <div class="form-grid">
                   <div class="field"><label>Membership (singers, fees, Singer app)</label><select name="show_membership"><option value="0">Hidden</option><option value="1">Shown</option></select></div>
@@ -290,7 +290,7 @@
               <button class="btn btn-primary btn-lg">Save settings</button>
             </div>
           </form>
-          <div class="card" style="max-width:520px">
+          <div class="card hidden" id="demoCard" style="max-width:520px">
             <h3>Admin access</h3>
             <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--ink-2)">
               <input type="checkbox" id="demoToggle" style="margin-top:3px">
