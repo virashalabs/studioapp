@@ -51,6 +51,7 @@ async function xlImport({ title, map, send, describe, after }) {
     if (errs.length && !check.partial_ok) return true;
     const answers = { confirm: qs.filter((q) => f['q' + q.row]).map((q) => q.row), skip: qs.filter((q) => !f['q' + q.row]).map((q) => q.row) };
     const r = await send(rows, false, answers);
+    if (r.dry_run || r.ok === false) { App.toast('Nothing was saved – please refresh the page and upload again', 'error'); return true; }
     App.toast(describe(r).replace(/<[^>]+>/g, ''), 'ok');
     reload();
     if (after) await after();
