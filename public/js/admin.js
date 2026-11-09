@@ -768,7 +768,9 @@ async function loadClearOpts() {
       ${opt('events', '1', `Weekly events, votes and line-ups – <b>${c.events}</b>`, true)}
       ${opt('bookings', '1', `Studio bookings – <b>${c.bookings}</b>`, true)}
       ${opt('reviews', '1', `Reviews / testimonials (the sample ones) – <b>${c.reviews}</b>`, true)}
-      ${opt('notifications', '1', `Bell notifications – <b>${c.notifications}</b>`, true)}`;
+      ${opt('notifications', '1', `Bell notifications – <b>${c.notifications}</b>`, true)}
+      ${opt('banners', '1', `Home page banners – <b>${c.banners}</b> <small class="muted">(add real ones in 🖼️ Banners)</small>`, true)}
+      ${opt('gallery', '1', `Gallery photos – <b>${c.gallery}</b> <small class="muted">(add real ones in 📸 Gallery)</small>`, true)}`;
   } catch { /* not superadmin */ }
 }
 $('clearForm').addEventListener('submit', async (e) => {
@@ -777,9 +779,9 @@ $('clearForm').addEventListener('submit', async (e) => {
   if (f.confirm !== 'DELETE') return App.toast('Type DELETE (in capitals) to confirm', 'error');
   if (!confirm('Delete the selected data permanently?')) return undefined;
   try {
-    const r = await App.api('api/admin/clear-data', { method: 'POST', body: { confirm: 'DELETE', singers: f.singers, events: !!f.events, bookings: !!f.bookings, reviews: !!f.reviews, notifications: !!f.notifications } });
+    const r = await App.api('api/admin/clear-data', { method: 'POST', body: { confirm: 'DELETE', singers: f.singers, events: !!f.events, bookings: !!f.bookings, reviews: !!f.reviews, notifications: !!f.notifications, banners: !!f.banners, gallery: !!f.gallery } });
     const d = r.done;
-    App.toast(`Cleared: ${[d.singers != null && `${d.singers} singers`, d.events != null && `${d.events} events`, d.bookings != null && `${d.bookings} bookings`, d.reviews != null && `${d.reviews} reviews`].filter(Boolean).join(', ') || 'nothing'}`, 'ok');
+    App.toast(`Cleared: ${[d.singers != null && `${d.singers} singers`, d.events != null && `${d.events} events`, d.bookings != null && `${d.bookings} bookings`, d.reviews != null && `${d.reviews} reviews`, d.banners != null && `${d.banners} banners`, d.gallery != null && `${d.gallery} photos`].filter(Boolean).join(', ') || 'nothing'}`, 'ok');
     e.target.reset();
     loadClearOpts();
   } catch (err) { App.toast(err.message, 'error'); }

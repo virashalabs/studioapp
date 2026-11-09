@@ -609,6 +609,8 @@ app.get('/api/admin/clear-data', (req, res) => {
     bookings: n('SELECT COUNT(*) n FROM bookings'),
     events: n('SELECT COUNT(*) n FROM events'),
     reviews: n('SELECT COUNT(*) n FROM testimonials'),
+    banners: n('SELECT COUNT(*) n FROM banners'),
+    gallery: n('SELECT COUNT(*) n FROM gallery'),
     notifications: n('SELECT COUNT(*) n FROM notifications'),
   });
 });
@@ -633,6 +635,8 @@ app.post('/api/admin/clear-data', (req, res) => {
       done.events = db.prepare('DELETE FROM events').run().changes;
     }
     if (b.bookings) done.bookings = db.prepare('DELETE FROM bookings').run().changes;
+    if (b.banners) done.banners = db.prepare('DELETE FROM banners').run().changes;
+    if (b.gallery) done.gallery = db.prepare('DELETE FROM gallery').run().changes;
     if (b.reviews) done.reviews = db.prepare('DELETE FROM testimonials').run().changes;
     if (b.notifications) done.notifications = db.prepare('DELETE FROM notifications').run().changes;
     setSetting('demo_cleared', '1'); // stop the demo content from being added back on restart

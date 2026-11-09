@@ -290,7 +290,9 @@ function seed() {
     insertSetting.run('admin_password_hash', hashPassword(process.env.ADMIN_PASSWORD || 'admin123'));
   }
 
-  if (db.prepare('SELECT COUNT(*) AS n FROM banners').get().n === 0) {
+  // After the superadmin clears the demo data, never add the sample banners, gallery, reviews or singers again.
+  const cleared = db.prepare("SELECT value FROM settings WHERE key = 'demo_cleared'").get();
+  if (!cleared && db.prepare('SELECT COUNT(*) AS n FROM banners').get().n === 0) {
     const ins = db.prepare(
       'INSERT INTO banners (title, subtitle, event_date, image, cta_text, cta_link, sort) VALUES (?,?,?,?,?,?,?)'
     );
@@ -304,7 +306,7 @@ function seed() {
     ins.run('Weekday Rehearsal Offer', 'Flat 15% off on all weekday half-day slots this month.', null, 'img/banner-offer.svg', 'Grab the Offer', 'book.html', 3);
   }
 
-  if (db.prepare('SELECT COUNT(*) AS n FROM gallery').get().n === 0) {
+  if (!cleared && db.prepare('SELECT COUNT(*) AS n FROM gallery').get().n === 0) {
     const ins = db.prepare('INSERT INTO gallery (image, caption, category, sort) VALUES (?,?,?,?)');
     [
       ['img/gallery-1.svg', 'The Live Room', 'Live Room'],
@@ -316,8 +318,6 @@ function seed() {
     ].forEach(([img, cap, cat], i) => ins.run(img, cap, cat, i));
   }
 
-  // After the superadmin clears the demo data, never add sample reviews or demo singers again.
-  const cleared = db.prepare("SELECT value FROM settings WHERE key = 'demo_cleared'").get();
   if (!cleared && db.prepare('SELECT COUNT(*) AS n FROM testimonials').get().n === 0) {
     const ins = db.prepare('INSERT INTO testimonials (name, band, message, rating, approved) VALUES (?,?,?,?,1)');
     ins.run('Arjun Menon', 'The Backbenchers', 'Best-sounding room in the city. The drum kit is always tuned and the AC actually works! We rehearse here every week.', 5);
