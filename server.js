@@ -20,6 +20,24 @@ const THUMB_DIR = path.join(UPLOAD_DIR, 'thumbs');
 fs.mkdirSync(THUMB_DIR, { recursive: true });
 
 app.use(express.json({ limit: '10mb' }));
+// Pages link their CSS/JS with "?v=<build>" so browsers fetch fresh copies after every deploy
+// instead of using a cached old version for up to 10 minutes.
+const BUILD = (process.env.RENDER_GIT_COMMIT || Date.now().toString(36)).slice(0, 8);
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const pageCache = new Map();
+app.get(/(^\/$|\.html$)/, (req, res, next) => {
+  const rel = req.path.endsWith('/') ? req.path + 'index.html' : req.path;
+  const file = path.join(PUBLIC_DIR, path.normalize(rel));
+  if (!file.startsWith(PUBLIC_DIR + path.sep)) return next();
+  let html = pageCache.get(file);
+  if (html === undefined) {
+    if (!fs.existsSync(file)) return next();
+    html = fs.readFileSync(file, 'utf8').replace(/((?:href|src)="(?:css|js)\/[\w.-]+\.(?:css|js))"/g, `$1?v=${BUILD}"`);
+    pageCache.set(file, html);
+  }
+  res.setHeader('Cache-Control', 'no-cache');
+  res.type('html').send(html);
+});
 // Images uploaded before thumbnails existed have no small copy: serve the full image instead.
 app.get('/uploads/thumbs/:file', (req, res, next) => {
   const file = path.basename(req.params.file);
