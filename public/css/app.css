@@ -1,0 +1,101 @@
+/* ===== Singer app (phone-first, installable) ===== */
+.app-body { min-height: 100vh; min-height: 100dvh; font-size: 16px; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+.app-small { font-size: 13px; }
+
+/* Login */
+.app-login { max-width: 460px; margin: 0 auto; padding: calc(28px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 14px; min-height: 100dvh; }
+.app-login-top { text-align: center; padding: 8px 0 4px; }
+.app-login-logo { margin: 0 auto 12px; border-radius: 20px; box-shadow: 0 8px 30px rgba(0, 0, 0, .35); }
+.app-login-top h1 { font-size: 22px; margin: 0; }
+.app-login-top p { margin: 4px 0 0; color: var(--muted); }
+.app-admin-section { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); }
+.app-install { background: none; border: 1px dashed var(--line); color: var(--ink); border-radius: 12px; padding: 12px; font: inherit; cursor: pointer; }
+
+/* Cards */
+.app-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); }
+.app-card h2, .app-card h3 { margin: 0 0 10px; font-size: 17px; }
+.app-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.app-card-head h3 { margin: 0; }
+.app-card-head a { color: var(--accent); font-size: 14px; font-weight: 500; }
+.app-link-card { display: flex; align-items: center; gap: 12px; font-size: 26px; }
+.app-link-card span:nth-child(1) { flex: 1; font-size: 15px; }
+.app-link-card > span:last-child { font-size: 24px; color: var(--muted); }
+.app-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.app-row .ev-input { flex: 1; min-width: 0; margin: 0; }
+.app-big { font-size: 28px; }
+.app-loading { padding: 40px 0; text-align: center; color: var(--muted); }
+
+/* Top bar + drawer */
+.app-bar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top)) 10px 8px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+.app-bar h1 { flex: 1; margin: 0; font-size: 18px; text-align: center; }
+.app-icon-btn, .app-avatar { width: 42px; height: 42px; border-radius: 12px; border: 0; background: none; color: var(--ink); font-size: 22px; cursor: pointer; }
+.app-avatar { border-radius: 50%; background: var(--accent); color: #fff; font-size: 17px; font-weight: 700; width: 36px; height: 36px; margin: 3px; }
+.app-drawer { position: fixed; z-index: 50; top: 0; bottom: 0; left: 0; width: min(300px, 84vw); background: var(--card); border-right: 1px solid var(--line); transform: translateX(-102%); transition: transform .25s ease; display: flex; flex-direction: column; padding: calc(14px + env(safe-area-inset-top)) 10px calc(14px + env(safe-area-inset-bottom)); overflow-y: auto; }
+.drawer-open .app-drawer { transform: none; box-shadow: var(--shadow-lg); }
+.app-scrim { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .5); }
+.app-drawer-head { display: flex; align-items: center; gap: 12px; padding: 4px 8px 16px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.app-drawer-head img { border-radius: 12px; }
+.app-drawer-head b { display: block; }
+.app-drawer-head small { color: var(--muted); }
+.app-drawer a, .app-drawer-btn { display: flex; align-items: center; gap: 14px; padding: 12px 12px; border-radius: 12px; color: var(--ink); font: inherit; font-size: 16px; background: none; border: 0; width: 100%; text-align: left; cursor: pointer; }
+.app-drawer a span, .app-drawer-btn span { width: 24px; text-align: center; font-size: 19px; }
+.app-drawer a.on { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); font-weight: 700; }
+.app-drawer hr { border: 0; border-top: 1px solid var(--line); margin: 8px 0; width: 100%; }
+.app-drawer-foot { margin-top: auto; padding: 14px 12px 0; font-size: 13px; color: var(--muted); }
+.app-drawer-foot a { display: inline; padding: 0; color: var(--muted); text-decoration: underline; }
+
+/* Main area */
+.app-main { max-width: 640px; margin: 0 auto; padding: 14px 14px calc(28px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 14px; }
+.app-frame { display: block; width: 100%; height: calc(100dvh - 59px - env(safe-area-inset-top)); border: 0; background: var(--bg); }
+.app-hello h2 { margin: 4px 0 0; font-size: 24px; }
+.app-hello p { margin: 2px 0 0; color: var(--muted); }
+
+.app-usage-num { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.app-usage-num b { font-size: 36px; line-height: 1; }
+.app-usage-num span { color: var(--muted); }
+.app-usage small { display: block; margin-top: 6px; }
+
+.app-pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; font-size: 14px; background: var(--surface-2, var(--bg)); color: var(--ink-2); }
+.app-pill.ok { background: var(--green-bg); color: var(--green); }
+.app-pill.warn { background: var(--amber-bg); color: var(--amber); }
+.app-pill.bad { background: var(--red-bg); color: var(--red); }
+a.app-pill { width: 100%; justify-content: space-between; }
+
+.app-ev-title b { display: block; font-size: 17px; }
+.app-ev-title small { color: var(--muted); }
+.app-ev-title { margin-bottom: 10px; }
+.app-lineup, .app-songs, .app-fees, .app-plans { list-style: none; margin: 12px 0 0; padding: 0; }
+.app-lineup li { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+.app-lineup small { color: var(--muted); white-space: nowrap; }
+
+.app-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.app-tiles a { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px 12px; display: flex; flex-direction: column; gap: 6px; font-weight: 500; }
+.app-tiles a span { font-size: 28px; }
+.app-tiles a:active { transform: scale(.98); }
+
+.app-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.app-chips .chip { flex: none; }
+.app-weeks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 14px; }
+.app-weeks div { background: var(--surface-2, var(--bg)); border-radius: 10px; padding: 8px 4px; text-align: center; display: flex; flex-direction: column; }
+.app-weeks b { font-size: 20px; }
+.app-weeks small { font-size: 11px; }
+.app-songs li { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.app-songs li:first-child, .app-fees li:first-child, .app-plans li:first-child { border-top: 0; }
+.app-songs .n { color: var(--muted); font-size: 13px; text-align: right; }
+.app-songs span small { display: block; color: var(--muted); font-size: 13px; }
+.app-songs li.over b { color: var(--red); }
+
+.app-card-slot .member-card { margin: 0 auto; }
+.app-pay { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.app-pay details summary { cursor: pointer; color: var(--accent); }
+.app-pay .pay-qr { max-width: 240px; margin: 10px auto 0; border-radius: 12px; }
+.app-fees li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.app-fees .ok { color: var(--green); } .app-fees .bad { color: var(--red); } .app-fees .warn { color: var(--amber); }
+.app-plans li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; margin-top: 8px; position: relative; }
+.app-plans li span { flex: 1; }
+.app-plans li small { display: block; color: var(--muted); }
+.app-plans li.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.app-plans em { position: absolute; top: -9px; right: 10px; background: var(--accent); color: #fff; font-style: normal; font-size: 11px; padding: 1px 8px; border-radius: 999px; }
+
+/* Website pages shown inside the app */
+body.embedded #site-header, body.embedded #site-footer { display: none; }

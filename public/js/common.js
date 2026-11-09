@@ -44,6 +44,12 @@ const App = (() => {
   }
 
   function renderChrome(active) {
+    // Inside the singer app the page is shown without the website header/footer.
+    if (window.self !== window.top || new URLSearchParams(location.search).has('embed')) {
+      document.body.classList.add('embedded');
+      settings().then(fillSettings).catch(() => {});
+      return;
+    }
     const header = document.getElementById('site-header');
     const footer = document.getElementById('site-footer');
     const links = [
@@ -72,7 +78,7 @@ const App = (() => {
         </div>
         <nav class="subnav"><div class="wrap">
           ${links.map(([k, href, t]) => `<a href="${href}" class="${k === active ? 'active' : ''}">${t}</a>`).join('')}
-          <span class="right"><a href="member.html">Member Login</a><a href="book.html#lookup">My Booking</a><a href="admin.html">Studio Admin</a></span>
+          <span class="right"><a href="app.html">📱 Singer App</a><a href="member.html">Member Login</a><a href="book.html#lookup">My Booking</a><a href="admin.html">Studio Admin</a></span>
         </div></nav>`;
       header.querySelector('.header-search input').addEventListener('change', (e) => e.target.form.submit());
       const root = document.documentElement;

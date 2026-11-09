@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem("sb-theme")||"dark"}catch(e){}</script>
+  <title>Rhythm Studio</title>
+  <meta name="description" content="Rhythm Rehearsal Studio singer app: your songs, membership, weekly event and studio booking.">
+  <meta name="theme-color" content="#0d0f15">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Rhythm Studio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="img/favicon-32.png">
+  <link rel="apple-touch-icon" href="img/app-192.png">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="app-body">
+
+  <!-- Login: singers first; studio admin in its own section below -->
+  <main id="loginScreen" class="app-login hidden">
+    <div class="app-login-top">
+      <img src="img/app-192.png" alt="" width="84" height="84" class="app-login-logo">
+      <h1>Rhythm Rehearsal Studio</h1>
+      <p>Singer app</p>
+    </div>
+    <form class="app-card" id="loginForm" novalidate>
+      <h2>Singer login</h2>
+      <div id="loginError" class="alert alert-error hidden"></div>
+      <label class="ev-label" for="lNo">Mobile number or member no.</label>
+      <input class="ev-input" id="lNo" name="member_no" inputmode="tel" autocomplete="username" placeholder="98400 11223">
+      <label class="ev-label" for="lPin">PIN</label>
+      <input class="ev-input" id="lPin" name="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="4-digit PIN">
+      <button class="btn btn-primary btn-lg btn-block" style="margin-top:16px">Log in</button>
+      <p class="muted app-small">Your first PIN is the last 4 digits of your mobile number.</p>
+    </form>
+    <a class="app-card app-link-card" href="event.html">🎤 <span><b>New singer?</b><br><small class="muted">Join this week's event with your mobile number</small></span><span aria-hidden="true">›</span></a>
+    <button type="button" class="app-install hidden" data-install>📲 Add this app to your home screen</button>
+    <div class="app-admin-section">
+      <small>Studio staff</small>
+      <a href="admin.html" class="btn btn-ghost btn-sm">🔒 Studio admin login</a>
+    </div>
+  </main>
+
+  <!-- Signed in -->
+  <div id="shell" class="hidden">
+    <header class="app-bar">
+      <button type="button" class="app-icon-btn" id="menuBtn" aria-label="Open menu" aria-controls="drawer" aria-expanded="false">☰</button>
+      <h1 id="viewTitle">Home</h1>
+      <button type="button" class="app-avatar" id="avatarBtn" aria-label="My details"></button>
+    </header>
+
+    <nav class="app-drawer" id="drawer" aria-label="Menu">
+      <div class="app-drawer-head">
+        <img src="img/app-192.png" alt="" width="44" height="44">
+        <div><b id="drawerName"></b><small id="drawerSub"></small></div>
+      </div>
+      <a href="#home" data-nav="home"><span>🏠</span>Home</a>
+      <a href="#event" data-nav="event"><span>🎤</span>Weekly event</a>
+      <a href="#songs" data-nav="songs"><span>🎵</span>My songs</a>
+      <a href="#membership" data-nav="membership"><span>💳</span>Membership &amp; fees</a>
+      <a href="#book" data-nav="book"><span>📅</span>Book the studio</a>
+      <a href="#gallery" data-nav="gallery"><span>🖼️</span>Gallery</a>
+      <a href="#profile" data-nav="profile"><span>👤</span>My details</a>
+      <hr>
+      <button type="button" class="app-drawer-btn hidden" data-install><span>📲</span>Add to home screen</button>
+      <a data-wa target="_blank" rel="noopener"><span>💬</span>WhatsApp the studio</a>
+      <button type="button" class="app-drawer-btn" id="themeBtn"><span>🌓</span>Light / dark</button>
+      <button type="button" class="app-drawer-btn" id="logoutBtn"><span>🚪</span>Log out</button>
+      <div class="app-drawer-foot"><a href="admin.html">Studio admin</a> · <a href="./">Website</a></div>
+    </nav>
+    <div class="app-scrim" id="scrim" hidden></div>
+
+    <main class="app-main" id="view"></main>
+    <iframe class="app-frame hidden" id="frame" title="Studio page"></iframe>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script src="js/member-card.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
