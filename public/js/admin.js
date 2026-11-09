@@ -54,6 +54,7 @@ async function boot() {
   $('demoNote').classList.toggle('hidden', !demo);
   $('pwField').classList.toggle('hidden', demo);
   $('pw').required = !demo;
+  $('user').required = !demo;
   $('loginBtn').textContent = demo ? 'Proceed to Admin Dashboard →' : 'Log in';
   $('demoPill').classList.toggle('hidden', !demo);
   $('demoBanner').classList.toggle('hidden', !demo);
@@ -65,7 +66,7 @@ async function boot() {
 $('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
-    await App.api('api/admin/login', { method: 'POST', body: { password: $('pw').value } });
+    await App.api('api/admin/login', { method: 'POST', body: { username: $('user').value, password: $('pw').value } });
     $('pw').value = '';
     boot();
   } catch (err) {

@@ -237,12 +237,24 @@ app.get('/api/bookings/lookup', (req, res) => {
 });
 
 // ---------- admin API ----------
+// Failed admin logins per IP: after 10 wrong tries, wait 15 minutes.
+const loginFails = new Map();
 app.post('/api/admin/login', (req, res) => {
   const s = getSettings();
   const demo = s.admin_demo_mode === '1';
-  if (!demo && !verifyPassword(String(req.body.password || ''), s.admin_password_hash)) {
-    return res.status(401).json({ error: 'Incorrect password.' });
+  const ip = req.ip || 'unknown', now = Date.now();
+  const f = loginFails.get(ip);
+  if (f && f.until > now) return res.status(429).json({ error: 'Too many wrong attempts. Please try again in 15 minutes.' });
+  // Username is not case sensitive ("Admin" = "admin").
+  const userOk = String(req.body.username || '').trim().toLowerCase() === String(s.admin_username || 'admin').toLowerCase();
+  if (!demo && !(userOk && verifyPassword(String(req.body.password || ''), s.admin_password_hash))) {
+    // Count failures within a 15-minute window that starts at the first one.
+    const fresh = !f || now - f.since > 15 * 60 * 1000;
+    const n = (fresh ? 0 : f.n) + 1;
+    loginFails.set(ip, { n, since: fresh ? now : f.since, until: n >= 10 ? now + 15 * 60 * 1000 : 0 });
+    return res.status(401).json({ error: 'Incorrect username or password.' });
   }
+  loginFails.delete(ip);
   const exp = String(Date.now() + 1000 * 60 * 60 * 12);
   res.setHeader('Set-Cookie', `sb_admin=${exp}.${sign(exp)}; HttpOnly; SameSite=Strict; Path=${COOKIE_PATH}; Max-Age=${60 * 60 * 12}`);
   res.json({ ok: true });

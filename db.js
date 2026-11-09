@@ -182,6 +182,7 @@ const DEFAULT_SETTINGS = {
     { icon: '🅿️', title: 'Parking & Loading', text: 'Easy gear loading bay and parking for the band van.' },
     { icon: '☕', title: 'Green Room', text: 'Chill-out lounge with tea, coffee and Wi-Fi between takes.' },
   ]),
+  admin_username: 'admin', // admin login name (not case sensitive)
   admin_demo_mode: '1', // demo site: admin dashboard opens without a password
   gallery_categories: 'Live Room, Audio System, Mixing Desk, Green Room Lounge, Pantry Area, Events',
   // Membership tiers, separate for male and female singers: songs per calendar month (null = unlimited) and monthly price.
