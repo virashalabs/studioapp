@@ -264,11 +264,13 @@ function tabShare() {
 function tabVotes() {
   const e = ev.event, link = siteUrl(`event.html?id=${e.id}`);
   const ins = ev.votes.filter((v) => v.going), outs = ev.votes.filter((v) => !v.going);
-  const person = (m, btns) => `<li><span><b>${esc(m.name)}</b> <small class="muted">${m.gender === 'Female' ? '♀' : '♂'} ${esc(m.member_no)}</small>${m.approved ? '' : ' <span class="pill pending">New</span>'}</span><span class="actions">${btns}</span></li>`;
+  const person = (m, btns) => `<li><span><b>${esc(m.name)}</b> <small class="muted">${m.gender === 'Female' ? '♀' : '♂'} ${esc(m.member_no)} · ${esc(m.phone)}</small>${m.approved ? '' : ' <span class="pill pending">🆕 New singer</span>'}</span><span class="actions">${m.approved ? '' : `<button type="button" class="btn btn-green btn-sm" data-approve="${m.id}">Approve</button>`}${btns}</span></li>`;
   const remind = (m) => `<a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="${waLink(m.phone, `Hi ${firstName(m.name)}, are you singing at ${e.title} (${fmtEvDay(e.event_date)})? Please vote here: ${link}`)}">💬 Remind</a>`;
   const col = (title, list, btns, empty) => `<div><h4>${title} <small class="muted">${list.length}</small></h4>${list.length ? `<ul class="ev-people">${list.map((m) => person(m, btns(m))).join('')}</ul>` : `<p class="muted">${empty}</p>`}</div>`;
   const byG = (g) => ins.filter((v) => v.gender === g).length;
-  return `<p class="muted" style="margin-top:0">${ins.length} in (${byG('Male')} male, ${byG('Female')} female) · ${outs.length} not coming · ${ev.silent.length} haven't answered. You can set an answer yourself for singers who replied on WhatsApp.</p>
+  const fresh = ev.votes.filter((v) => !v.approved);
+  return `${fresh.length ? `<div class="alert alert-warn" style="margin:0 0 12px">🆕 ${fresh.length} new singer${fresh.length === 1 ? '' : 's'} joined through the link: ${fresh.map((m) => esc(m.name)).join(', ')}. Approve to add them to your members (their PIN is the last 4 digits of their phone).</div>` : ''}
+    <p class="muted" style="margin-top:0">${ins.length} in (${byG('Male')} male, ${byG('Female')} female) · ${outs.length} not coming · ${ev.silent.length} haven't answered. You can set an answer yourself for singers who replied on WhatsApp.</p>
     <div class="ev-grid three">
       ${col('🎤 In', ins, (m) => `<button type="button" class="btn btn-ghost btn-sm" data-vote="${m.id}" data-going="0">Mark out</button>`, 'Nobody yet.')}
       ${col('🙅 Not coming', outs, (m) => `<button type="button" class="btn btn-ghost btn-sm" data-vote="${m.id}" data-going="1">Mark in</button>`, 'Nobody.')}
@@ -387,6 +389,12 @@ async function onEventClick(e) {
       return refresh();
     }
     if (t.dataset.editch) return editChoices(Number(t.dataset.editch));
+    if (t.dataset.approve) {
+      await App.api(`api/admin/members/${t.dataset.approve}/approve`, { method: 'POST' });
+      App.toast('Singer approved – now in your members list', 'ok');
+      refreshCounts();
+      return refresh();
+    }
     if (t.dataset.rmrow) { readDraft(); draft.rows.splice(Number(t.dataset.rmrow), 1); return openEvent(id); }
     switch (t.dataset.act) {
       case 'copy': navigator.clipboard.writeText($('evLink').value).then(() => App.toast('Link copied', 'ok')); return undefined;

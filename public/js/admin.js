@@ -194,7 +194,7 @@ async function refreshCounts() {
   const [stats, testis] = await Promise.all([App.api('api/admin/stats'), App.api('api/admin/testimonials')]).catch(() => [null, null]);
   if (stats) $('pendingCount').textContent = stats.pending || '';
   if (testis) $('reviewCount').textContent = testis.filter((t) => !t.approved).length || '';
-  App.api('api/admin/members').then((d) => { $('memberAlertCount').textContent = d.members.filter((m) => m.requested || !m.approved || (m.claims && m.claims.length)).length || ''; }).catch(() => {});
+  App.api('api/admin/members').then((d) => { $('memberAlertCount').textContent = d.members.filter((m) => m.requested || !m.approved || (m.claims && m.claims.length)).length || ''; $('eventAlertCount').textContent = d.members.filter((m) => !m.approved).length || ''; }).catch(() => {});
 }
 
 // ---------- booking table + actions ----------
