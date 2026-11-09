@@ -81,8 +81,9 @@
           <div id="payBox" class="pay-box hidden">
             <img src="img/upi-qr.png" alt="Google Pay QR code for Rhythm Rehearsal Studio" class="pay-qr" width="520" height="790">
             <div>
-              <p style="margin:0 0 8px">Scan the QR with any UPI app, or tap the button on your phone.</p>
-              <a class="btn btn-primary btn-block" id="upiBtn">Pay with UPI app</a>
+              <p style="margin:0 0 8px" id="payHint">Scan the QR with GPay or any UPI app.</p>
+              <a class="btn btn-gpay btn-block hidden" id="gpayBtn">Pay with GPay</a>
+              <a class="btn btn-outline btn-block hidden" id="upiBtn" style="margin-top:8px">Other UPI app</a>
               <p class="muted" style="font-size:13px;margin:8px 0 14px">UPI ID: <b id="upiId"></b></p>
               <form id="claimForm" novalidate>
                 <label for="utr" style="font-size:14px;font-weight:600">Paid? Enter the UPI transaction ID (UTR)</label>

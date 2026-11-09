@@ -92,9 +92,14 @@ function renderMember() {
     App.settings().then((st) => {
       const pa = st.upi_id || '9962258845@okbizaxis';
       $('upiId').textContent = pa;
-      const q = new URLSearchParams({ pa, pn: st.upi_name || st.studio_name || 'Rhythm Rehearsal Studio', am: String(m.fee_due), cu: 'INR', tn: `${m.member_no} fee ${fee.month}` });
-      $('upiBtn').href = 'upi://pay?' + q.toString().replace(/\+/g, '%20');
-      $('upiBtn').textContent = `Pay ${App.money(m.fee_due, cur)} with UPI app`;
+      const l = App.upiLinks({ pa, pn: st.upi_name || st.studio_name || 'Rhythm Rehearsal Studio', am: m.fee_due, tn: `${m.member_no} fee ${fee.month}` });
+      // On a phone: open GPay directly (or any UPI app). On a computer: scan the QR with the phone.
+      $('gpayBtn').classList.toggle('hidden', !l.mobile);
+      $('upiBtn').classList.toggle('hidden', !l.mobile);
+      $('gpayBtn').href = l.gpay; $('gpayBtn').dataset.any = l.any;
+      $('gpayBtn').innerHTML = `Pay ${App.money(m.fee_due, cur)} with <b>GPay</b>`;
+      $('upiBtn').href = l.any;
+      $('payHint').textContent = l.mobile ? 'Tap to pay in GPay, or scan the QR from another phone.' : 'Scan this QR with GPay or any UPI app on your phone.';
     }).catch(() => {});
     const claim = m.claims && m.claims[0];
     $('claimNote').innerHTML = claim
@@ -203,6 +208,12 @@ $('profileForm').addEventListener('submit', async (e) => {
     data = await App.api('api/member/me');
     renderMember();
   } catch (err) { App.toast(err.message, 'error'); }
+});
+
+$('gpayBtn').addEventListener('click', () => {
+  // GPay not installed: the link does nothing, so open the UPI app chooser instead.
+  const t = setTimeout(() => { if (!document.hidden) location.href = $('gpayBtn').dataset.any; }, 1800);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once: true });
 });
 
 boot().catch((e) => App.toast(e.message, 'error'));

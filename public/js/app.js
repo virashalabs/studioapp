@@ -237,12 +237,21 @@ function viewSongs() {
 // ---------- Payments ----------
 function upiLink(m) {
   const pa = settings.upi_id || '9962258845@okbizaxis';
-  const q = new URLSearchParams({ pa, pn: settings.upi_name || settings.studio_name || 'Rhythm Rehearsal Studio', am: String(m.fee_due || m.plan_price), cu: 'INR', tn: `${m.member_no} fee ${m.fee.month}` });
-  return { pa, href: 'upi://pay?' + q.toString().replace(/\+/g, '%20') };
+  const l = App.upiLinks({ pa, pn: settings.upi_name || settings.studio_name || 'Rhythm Rehearsal Studio', am: m.fee_due || m.plan_price, tn: `${m.member_no} fee ${m.fee.month}` });
+  return { pa, ...l, href: l.any };
+}
+
+// QR always visible; on a phone the buttons open GPay / any UPI app with the amount filled in.
+function payBlock(m, amount) {
+  const u = upiLink(m);
+  return `<div class="app-qr"><img src="img/upi-qr.png" alt="UPI QR code for Rhythm Rehearsal Studio" width="520" height="790"><small>UPI ID: <b>${esc(u.pa)}</b></small></div>
+    ${u.mobile ? `<a class="btn btn-gpay btn-lg btn-block" href="${u.gpay}" data-gpay="${u.any}">Pay ${money(amount)} with <b>GPay</b></a>
+      <a class="btn btn-outline btn-block" href="${u.any}">Other UPI app (PhonePe, Paytm…)</a>`
+      : '<p class="muted app-small" style="text-align:center;margin:0">Scan the QR with GPay or any UPI app on your phone.</p>'}`;
 }
 
 function viewPay() {
-  const m = me.member, f = m.fee, upi = upiLink(m);
+  const m = me.member, f = m.fee;
   const claim = m.claims && m.claims[0];
   const feeMsg = f.status === 'paid'
     ? `<div class="alert alert-ok" style="margin:0">✅ ${monthName(f.month)} fee of <b>${money(f.amount)}</b> paid on ${dShort(f.paid_on)}.</div>`
@@ -250,8 +259,7 @@ function viewPay() {
   $('view').innerHTML = `
     <section class="app-card"><h3>This month</h3>${feeMsg}
       ${m.fee_due > 0 ? `<div class="app-pay">
-        <a class="btn btn-primary btn-lg btn-block" href="${upi.href}">Pay ${money(m.fee_due)} with UPI</a>
-        <details><summary>Show QR code</summary><img src="img/upi-qr.png" alt="UPI QR code" class="pay-qr" width="520" height="790"><p class="muted app-small" style="text-align:center">UPI ID: <b>${esc(upi.pa)}</b></p></details>
+        ${payBlock(m, m.fee_due)}
         <form id="claimForm" novalidate><label class="ev-label" for="utr">Paid? Enter the UPI transaction ID (UTR)</label>
           <div class="app-row"><input class="ev-input" id="utr" inputmode="numeric" maxlength="40" placeholder="12-digit UTR"><button class="btn btn-green">I've paid</button></div></form>
         ${claim ? `<div class="alert alert-ok" style="margin:0">⏳ Payment note sent (UTR <b>${esc(claim.ref)}</b>). The studio will confirm it.</div>` : ''}</div>` : ''}</section>
@@ -271,7 +279,7 @@ function viewPay() {
 
 // ---------- Plans: pricing, upgrade benefits, payment options ----------
 function viewPlans() {
-  const m = me.member, plans = me.plans || [], upi = upiLink(m);
+  const m = me.member, plans = me.plans || [];
   const dueDay = (plansPub && plansPub.due_day) || 10;
   $('view').innerHTML = `
     <section class="app-card"><h3>${m.gender === 'Female' ? '👩 Women\'s' : '👨 Men\'s'} membership plans</h3>
@@ -279,11 +287,8 @@ function viewPlans() {
       <p class="muted app-small" style="margin-bottom:0">Songs are counted per calendar month. Sing past your limit and you move up to the next plan automatically.</p></section>
     <section class="app-card app-promo"><h3>🚀 Upgrade benefits</h3>${upgradeLadder(m, true)}</section>
     <section class="app-card"><h3>How to pay</h3>
-      <ul class="app-howpay">
-        <li><span>📱</span><div><b>UPI app</b><small>GPay, PhonePe, Paytm – any UPI app</small><a class="btn btn-primary btn-sm" href="${upi.href}" style="margin-top:8px">Pay with UPI</a></div></li>
-        <li><span>🔳</span><div><b>Scan QR</b><small>UPI ID: ${esc(upi.pa)}</small><details><summary>Show QR</summary><img src="img/upi-qr.png" alt="UPI QR code" class="pay-qr" width="520" height="790"></details></div></li>
-        <li><span>💵</span><div><b>Cash at the studio</b><small>Pay at the front desk on any event day</small></div></li>
-      </ul>
+      <div class="app-pay">${payBlock(m, m.fee_due || m.plan_price)}</div>
+      <ul class="app-howpay" style="margin-top:8px"><li><span>💵</span><div><b>Cash at the studio</b><small>Pay at the front desk on any event day</small></div></li></ul>
       <p class="muted app-small" style="margin-bottom:0">Fees are due before the ${dueDay}th of each month. After paying by UPI, enter the UTR in <a href="#pay">Payments</a>.</p></section>`;
 }
 
@@ -334,6 +339,14 @@ function viewProfile() {
 
 // Pages inside the app: keep the dashboard in sync when the singer changes their event songs.
 $('frame').addEventListener('load', () => { refreshMe().catch(() => {}); });
+
+// If GPay isn't installed the tez:// link does nothing: fall back to the UPI app chooser.
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('[data-gpay]');
+  if (!a) return;
+  const t = setTimeout(() => { if (!document.hidden) location.href = a.dataset.gpay; }, 1800);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once: true });
+});
 
 // ---------- install (add to home screen) ----------
 let installEvt = null;

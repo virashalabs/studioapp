@@ -157,7 +157,16 @@ const App = (() => {
     document.body.appendChild(lb);
   }
 
-  return { esc, api, toast, ymd, parseYmd, fmtDate, thumb, money, settings, slotInfo, renderChrome, lightbox, galleryCategories, pad };
+  // UPI payment links. GPay opens directly (tez:// on Android, gpay:// on iPhone); "any UPI app" lets the phone choose.
+  // On a computer these links can't open an app, so pages show the QR to scan instead.
+  function upiLinks({ pa, pn, am, tn }) {
+    const q = new URLSearchParams({ pa, pn, cu: 'INR', ...(am ? { am: String(am) } : {}), ...(tn ? { tn } : {}) }).toString().replace(/\+/g, '%20');
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const mobile = ios || /android/i.test(navigator.userAgent);
+    return { gpay: (ios ? 'gpay://upi/pay?' : 'tez://upi/pay?') + q, any: 'upi://pay?' + q, mobile };
+  }
+
+  return { upiLinks, esc, api, toast, ymd, parseYmd, fmtDate, thumb, money, settings, slotInfo, renderChrome, lightbox, galleryCategories, pad };
 })();
 
 // Eye button on every password / PIN field to show what's being typed.

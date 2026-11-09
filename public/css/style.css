@@ -876,3 +876,8 @@ a.slide { display: block; }
 .ev-lineup li small { width: 100%; order: 3; }
 .ev-past { padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
 .ev-past:first-child { border-top: 0; padding-top: 0; }
+
+/* Google Pay button */
+.btn-gpay { background: #fff; color: #3c4043; border: 1px solid #dadce0; font-weight: 500; }
+.btn-gpay b { color: #1a73e8; }
+.btn-gpay:hover { background: #f8f9fa; }
