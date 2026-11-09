@@ -511,6 +511,16 @@ app.use((err, req, res, next) => {
 
 const server = express();
 server.set('trust proxy', true);
+// Old addresses (e.g. studio.virashalabs.online, www.) permanently redirect to the main domain, keeping the path.
+// Off until CANONICAL_HOST is set; the onrender.com address is left alone for health checks and keep-awake pings.
+const CANONICAL_HOST = (process.env.CANONICAL_HOST || '').trim().toLowerCase();
+const REDIRECT_HOSTS = new Set((process.env.REDIRECT_HOSTS || '').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean));
+server.use((req, res, next) => {
+  if (CANONICAL_HOST && REDIRECT_HOSTS.has(req.hostname) && req.hostname !== CANONICAL_HOST) {
+    return res.redirect(301, `https://${CANONICAL_HOST}${req.originalUrl}`);
+  }
+  next();
+});
 // "/studioapp" -> "/studioapp/" so the pages' relative links resolve inside the app.
 server.use((req, res, next) => {
   const [p, q] = req.originalUrl.split('?');
