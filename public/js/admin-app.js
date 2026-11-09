@@ -174,7 +174,7 @@ function viewFees() {
   const unpaid = cache.members.filter((m) => m.fee_due > 0).sort((a, b) => (b.fee.status === 'overdue') - (a.fee.status === 'overdue') || b.fee_due - a.fee_due);
   const paid = cache.members.filter((m) => m.fee.status === 'paid');
   const total = cache.members.reduce((a, m) => a + (m.fee.status === 'paid' ? m.fee.amount : 0), 0);
-  const msg = (m) => `Hi ${first(m.name)}, a gentle reminder from Rhythm Rehearsal Studio: your membership fee of ${money(m.fee_due)} (${monthName(m.fee.month)}) is due before ${dShort(m.fee.due_date)}. Pay by GPay/UPI to ${settings.upi_id || '9962258845@okbizaxis'} or in the app: ${new URL('app.html#pay', location.href).href}\nThank you! 🎤`;
+  const msg = (m) => `Hi ${first(m.name)}, a gentle reminder from Demo Studio: your membership fee of ${money(m.fee_due)} (${monthName(m.fee.month)}) is due before ${dShort(m.fee.due_date)}. Pay by GPay/UPI to ${settings.upi_id || '9962258845@okbizaxis'} or in the app: ${new URL('app.html#pay', location.href).href}\nThank you! 🎤`;
   $('view').innerHTML = `
     <section class="app-stats"><div><small>${monthName(cache.members[0] ? cache.members[0].month : today().slice(0, 7), { month: 'long' })} collected</small><b>${money(total)}</b><span>${paid.length} paid</span></div>
       <div><small>Still to pay</small><b>${unpaid.length}</b><span>${money(unpaid.reduce((a, m) => a + m.fee_due, 0))}</span></div></section>
@@ -343,7 +343,7 @@ const eventFormHtml = (e) => `<div class="app-evform">
   <label class="ev-label">Title</label><input class="ev-input" data-ef="title" value="${esc(e.title || 'Weekly Karaoke Night')}">
   <label class="ev-label">Date</label><input class="ev-input" type="date" data-ef="event_date" value="${esc(e.event_date || nextSunday())}">
   <label class="ev-label">Time</label><input class="ev-input" data-ef="event_time" value="${esc(e.event_time || '')}" placeholder="6:30 PM">
-  <label class="ev-label">Venue</label><input class="ev-input" data-ef="venue" value="${esc(e.venue || 'Rhythm Rehearsal Studio')}">
+  <label class="ev-label">Venue</label><input class="ev-input" data-ef="venue" value="${esc(e.venue || 'Demo Studio')}">
   <label class="ev-label">Notes for singers</label><textarea class="ev-input" data-ef="notes" rows="2">${esc(e.notes || '')}</textarea>
   ${e.id ? `<label class="ev-label">Video link (Google Drive)</label><input class="ev-input" data-ef="video_link" value="${esc(e.video_link || '')}" placeholder="https://drive.google.com/…">` : ''}
   <button type="button" class="btn btn-primary btn-block" data-efsave style="margin-top:12px">${e.id ? 'Save details' : 'Create event'}</button></div>`;
@@ -369,7 +369,7 @@ function takeOut(id) {
     <label class="ev-label">Message</label><textarea class="ev-input" name="note" rows="3" maxlength="300" placeholder="Sorry, the list is full this week – see you next Sunday!"></textarea>
     <label class="app-check"><input type="checkbox" name="wa" value="1" checked> Also send it on WhatsApp</label>`, async (f) => {
     await App.api(`api/admin/events/${e.id}/votes/${id}`, { method: 'PUT', body: { going: false, admin_out: true, note: f.note } });
-    if (f.wa) window.open(wa(m.phone, `Hi ${first(m.name)}, about ${e.title} (${dDay(e.event_date)}): ${f.note || "you've been taken off this week's list."}\n\n– Rhythm Rehearsal Studio`), '_blank', 'noopener');
+    if (f.wa) window.open(wa(m.phone, `Hi ${first(m.name)}, about ${e.title} (${dDay(e.event_date)}): ${f.note || "you've been taken off this week's list."}\n\n– Demo Studio`), '_blank', 'noopener');
     App.toast(`${m.name} taken out`, 'ok'); refreshEvent();
   }, 'Take out');
 }

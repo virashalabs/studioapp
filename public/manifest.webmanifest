@@ -1,6 +1,6 @@
 {
-  "name": "Rhythm Rehearsal Studio",
-  "short_name": "Rhythm Studio",
+  "name": "Demo Studio",
+  "short_name": "Demo Studio",
   "description": "Your songs, membership, weekly event and studio booking.",
   "start_url": "app.html",
   "scope": "./",

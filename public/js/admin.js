@@ -965,7 +965,7 @@ let memberModal = null;
 async function openMember(id, month) {
   const d = await App.api(`api/admin/members/${id}`);
   const m = d.member;
-  const studio = (state.settings && state.settings.studio_name) || 'Rhythm Rehearsal Studio';
+  const studio = (state.settings && state.settings.studio_name) || 'Demo Studio';
   month = month && d.months.some((x) => x.month === month) ? month : d.months[0].month;
   const songs = d.songs.filter((s) => s.sung_on.startsWith(month)).slice().reverse(); // oldest first
   const lim = month === m.month ? m.plan_limit : null;

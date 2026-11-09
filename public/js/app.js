@@ -237,14 +237,14 @@ function viewSongs() {
 // ---------- Payments ----------
 function upiLink(m) {
   const pa = settings.upi_id || '9962258845@okbizaxis';
-  const l = App.upiLinks({ pa, pn: settings.upi_name || settings.studio_name || 'Rhythm Rehearsal Studio', am: m.fee_due || m.plan_price, tn: `${m.member_no} fee ${m.fee.month}` });
+  const l = App.upiLinks({ pa, pn: settings.upi_name || settings.studio_name || 'Demo Studio', am: m.fee_due || m.plan_price, tn: `${m.member_no} fee ${m.fee.month}` });
   return { pa, ...l, href: l.any };
 }
 
 // QR always visible; on a phone the buttons open GPay / any UPI app with the amount filled in.
 function payBlock(m, amount) {
   const u = upiLink(m);
-  return `<div class="app-qr"><img src="img/upi-qr-code.png" alt="UPI QR code for Rhythm Rehearsal Studio" width="436" height="436"><small>UPI ID: <b>${esc(u.pa)}</b></small></div>
+  return `<div class="app-qr"><img src="img/upi-qr-code.png" alt="UPI QR code for Demo Studio" width="436" height="436"><small>UPI ID: <b>${esc(u.pa)}</b></small></div>
     ${u.mobile ? `<a class="btn btn-gpay btn-lg btn-block" href="${u.gpay}" data-gpay="${u.any}">Pay ${money(amount)} with <b>GPay</b></a>
       <a class="btn btn-outline btn-block" href="${u.any}">Other UPI app (PhonePe, Paytm…)</a>`
       : '<p class="muted app-small" style="text-align:center;margin:0">Scan the QR with GPay or any UPI app on your phone.</p>'}`;
@@ -310,7 +310,7 @@ function viewProfile() {
       <label class="ev-label">New PIN</label><input class="ev-input" name="new_pin" type="password" inputmode="numeric" maxlength="6" placeholder="4–6 digits" autocomplete="new-password">
       <label class="ev-label">Type it again</label><input class="ev-input" name="pin2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password">
       <button class="btn btn-outline btn-block" style="margin-top:14px">Change PIN</button></form>`;
-  const studio = settings.studio_name || 'Rhythm Rehearsal Studio';
+  const studio = settings.studio_name || 'Demo Studio';
   $('cardSlot').innerHTML = MemberCard.html(m, studio);
   $('dlCard').onclick = (e) => { e.preventDefault(); MemberCard.download(m, studio); };
   App.eyes($('pinForm'));

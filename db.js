@@ -217,7 +217,7 @@ function verifyPassword(password, stored) {
 }
 
 const DEFAULT_SETTINGS = {
-  studio_name: 'Rhythm Rehearsal Studio',
+  studio_name: 'Demo Studio',
   tagline: 'Plug in. Play loud. Make memories.',
   phone: '+91 99622 58845',
   whatsapp: '919962258845',
@@ -237,7 +237,7 @@ const DEFAULT_SETTINGS = {
   booking_window_days: '120',
   about_title: 'A home for every band, every sound',
   about_text:
-    'Rhythm Rehearsal Studio is a fully air-conditioned, acoustically treated rehearsal space built by musicians, for musicians. ' +
+    'Demo Studio is a fully air-conditioned, acoustically treated rehearsal space built by musicians, for musicians. ' +
     'Whether you are a five-piece rock band tightening a setlist, a choir preparing for a concert, or a group of friends ' +
     'celebrating with a jam night, our room is ready the moment you walk in.\n\n' +
     'Book a half day for a focused rehearsal, or take the whole day for workshops, music meets, album pre-production ' +
@@ -271,7 +271,7 @@ const DEFAULT_SETTINGS = {
   membership_due_day: '10',
   // UPI payment details shown to singers (QR image in public/img/upi-qr.png).
   upi_id: '9962258845@okbizaxis',
-  upi_name: 'Rhythm Rehearsal Studio',
+  upi_name: 'Demo Studio',
   events_keep_weeks: '13', // weekly events older than this are offered for deletion // monthly fee must be paid by this day of the month
   instagram: 'https://instagram.com',
   youtube: 'https://youtube.com',

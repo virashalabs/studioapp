@@ -101,7 +101,7 @@ const App = (() => {
         </div></div>
         <div class="wrap footer-grid">
           <div>
-            <img class="footer-logo" src="img/logo.png" alt="Rhythm Rehearsal Studio" width="220" height="131">
+            <img class="footer-logo" src="img/logo.png" alt="Demo Studio" width="220" height="131">
             <p data-s="tagline"></p>
             <p>📍 <span data-s="address"></span><br>📞 <a data-tel><span data-s="phone"></span></a><br>✉️ <a data-mail><span data-s="email"></span></a></p>
           </div>
