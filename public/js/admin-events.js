@@ -256,9 +256,9 @@ function tabShare() {
         ${e.video_link ? `<a class="btn btn-green btn-sm" target="_blank" rel="noopener" href="${waShare(msgs.video)}">🎬 Videos up</a>` : ''}
       </div>
       <small class="muted">WhatsApp opens with the message ready – choose your group and send.</small>
-      <form id="evEdit" style="margin-top:18px"><h4>Event details</h4>${eventForm(e)}
-        <div class="actions" style="margin-top:12px"><button class="btn btn-primary btn-sm">Save details</button>
-          <button type="button" class="btn btn-ghost btn-sm" data-act="delete" style="color:var(--red)">Delete event</button></div></form>
+      <div id="evEdit" style="margin-top:18px"><h4>Event details</h4>${eventForm(e)}
+        <div class="actions" style="margin-top:12px"><button type="button" class="btn btn-primary btn-sm" data-act="ev-save">Save details</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-act="delete" style="color:var(--red)">Delete event</button></div></div>
     </div></div>`;
 }
 
@@ -416,6 +416,15 @@ async function onEventClick(e) {
         const r = await App.api(`api/admin/events/${id}/finish`, { method: 'POST' });
         App.toast(`Done – ${r.songs} songs added for ${r.singers} singers${r.upgraded ? ` · ${r.upgraded} plan${r.upgraded === 1 ? '' : 's'} moved up` : ''}`, 'ok');
         return refresh();
+      }
+      case 'ev-save': {
+        // The event popup is itself a form, so the details are read from the fields directly.
+        const box = $('evEdit'), body = {};
+        box.querySelectorAll('[name]').forEach((el) => { body[el.name] = el.value; });
+        await App.api(`api/admin/events/${id}`, { method: 'PUT', body });
+        App.toast('Event details saved', 'ok');
+        loadEvents();
+        return openEvent(id);
       }
       case 'lu-add': readDraft(); draft.rows.push({ male: '', female: '', title: '', album: '' }); return openEvent(id);
       case 'lu-males': {
