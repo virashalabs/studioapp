@@ -297,31 +297,48 @@ module.exports = function mountEvents(app, { notify, members }) {
     const ins = db.prepare('INSERT INTO event_pairs (event_id, male_id, female_id, title, album, sort) VALUES (?,?,?,?,?,?)');
     out.forEach((r, i) => ins.run(e.id, r.male, r.female, r.title, r.album, i));
     if (req.body.publish !== undefined) db.prepare('UPDATE events SET published = ? WHERE id = ?').run(req.body.publish ? 1 : 0, e.id);
+    const mark = db.prepare(`INSERT INTO event_votes (event_id, member_id, going) VALUES (?,?,1)
+      ON CONFLICT(event_id, member_id) DO UPDATE SET going = 1, admin_out = 0`);
+    for (const r of out) for (const id of [r.male, r.female]) if (id) mark.run(e.id, id);
     db.exec('COMMIT');
-    res.json({ ok: true, rows: out.length });
+    const recount = e.done ? countEvent(e) : null;
+    res.json({ ok: true, rows: out.length, recounted: recount });
   });
 
-  // Finish the week: every line-up song is added to the singers' song records on the event date
-  // (a duet counts for both). Running it again replaces that event's songs. Plans move up automatically.
-  app.post('/api/admin/events/:id/finish', (req, res) => {
-    const e = getEvent(req.params.id);
-    if (!e) return fail(res, 404, 'Event not found.');
-    if (e.event_date > today()) return fail(res, 400, 'The event date hasn\'t come yet.');
+  // Count the week: the final pairing list (line-up) decides. Every line-up song is added to the singers'
+  // song records on the event date (a duet counts for both). Running it again replaces that event's songs.
+  function countEvent(e) {
     const rows = lineup(e.id);
-    if (!rows.length) return fail(res, 400, 'Add the line-up first.');
     db.exec('BEGIN');
     db.prepare('DELETE FROM member_songs WHERE event_id = ?').run(e.id);
     const ins = db.prepare('INSERT INTO member_songs (member_id, sung_on, title, album, event_id) VALUES (?,?,?,?,?)');
     const singers = new Set();
-    for (const r of rows) for (const id of [r.male_id, r.female_id]) if (id) { ins.run(id, e.event_date, r.title, r.album, e.id); singers.add(id); }
+    let songs = 0;
+    for (const r of rows) for (const id of [r.male_id, r.female_id]) if (id) { ins.run(id, e.event_date, r.title, r.album, e.id); singers.add(id); songs++; }
     db.prepare('UPDATE events SET done = 1, voting_open = 0 WHERE id = ?').run(e.id);
     db.exec('COMMIT');
-    const upgraded = [];
-    if (e.event_date.slice(0, 7) === today().slice(0, 7)) {
-      for (const id of singers) { const t = autoUpgrade(id); if (t) upgraded.push(t.name); }
-    }
-    res.json({ ok: true, singers: singers.size, songs: rows.reduce((a, r) => a + (r.male_id ? 1 : 0) + (r.female_id ? 1 : 0), 0), upgraded: upgraded.length });
+    let upgraded = 0;
+    if (e.event_date.slice(0, 7) === today().slice(0, 7)) for (const id of singers) if (autoUpgrade(id)) upgraded++;
+    return { singers: singers.size, songs, upgraded };
+  }
+
+  app.post('/api/admin/events/:id/finish', (req, res) => {
+    const e = getEvent(req.params.id);
+    if (!e) return fail(res, 404, 'Event not found.');
+    if (e.event_date > today()) return fail(res, 400, 'The event date hasn\'t come yet.');
+    if (!lineup(e.id).length) return fail(res, 400, 'Add the line-up first.');
+    res.json({ ok: true, ...countEvent(e) });
   });
+
+  // Automatic count at 00:01 (India time) the day after the event, from the pairing list in the system.
+  const autoCount = () => {
+    try {
+      const due = db.prepare('SELECT * FROM events WHERE done = 0 AND event_date < ? AND EXISTS (SELECT 1 FROM event_pairs p WHERE p.event_id = events.id)').all(today());
+      for (const e of due) { const r = countEvent(e); console.log(`Event ${e.id} (${e.event_date}) counted automatically: ${r.songs} songs, ${r.singers} singers`); }
+    } catch (err) { console.error('auto count failed', err); }
+  };
+  setTimeout(autoCount, 5000);
+  setInterval(autoCount, 60 * 1000).unref();
 
   app.use(['/api/events', '/api/admin/events'], (e, req, res, next) => {
     if (e.status) return fail(res, e.status, e.message);

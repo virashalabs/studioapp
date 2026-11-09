@@ -1,3 +1,5 @@
+// Dates (event day, months, the 00:01 count) follow India time, also on servers that run in UTC.
+process.env.TZ = process.env.TZ || 'Asia/Kolkata';
 // Entry point: restore saved data (Supabase) before the database is opened, then start the web server.
 try { process.loadEnvFile(); } catch { /* .env is optional */ }
 const persist = require('./persist');

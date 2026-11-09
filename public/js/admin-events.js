@@ -240,7 +240,7 @@ function tabShare() {
       ${sw('published', '2 · Line-up published', 'Each singer sees only their own songs')}
       <div class="ev-finish">${e.done
         ? `<span class="pill approved">✔ Finished – ${ev.lineup.length} line-up songs added to the singers' monthly counts</span> <button type="button" class="btn btn-ghost btn-sm" data-act="finish">Count again</button>`
-        : `<button type="button" class="btn btn-dark" data-act="finish">3 · Finish week &amp; count songs</button><br><small class="muted">After the evening: adds every line-up song to the singers' records (a duet counts for both). Plans move up automatically if a singer passes their limit.</small>`}</div>
+        : `<button type="button" class="btn btn-dark" data-act="finish">3 · Finish week &amp; count songs</button><br><small class="muted">Happens automatically at 00:01 the night after the event, from the final pairing list. Press it to count right away. Changing the line-up later re-counts it.</small>`}</div>
       <h4 style="margin-top:20px">🎬 Video link (Google Drive)</h4>
       <div style="display:flex;gap:8px"><input id="evVideo" type="url" placeholder="https://drive.google.com/…" value="${esc(e.video_link || '')}" style="flex:1;min-width:0">
         <button type="button" class="btn btn-primary btn-sm" data-act="video">Save</button></div>
@@ -279,7 +279,7 @@ function tabVotes() {
 }
 
 // Song choices
-const nameOf = (id) => { const v = ev.votes.find((x) => x.id === id); return v ? v.name : `#${id}`; };
+const nameOf = (id) => { const v = ev.votes.find((x) => x.id === Number(id)) || ev.silent.find((x) => x.id === Number(id)); return v ? v.name : `#${id}`; };
 const labelOf = (id) => { const v = ev.votes.find((x) => x.id === id); return v ? `${v.name} (${v.member_no})` : ''; };
 function tabSongs() {
   const ins = ev.votes.filter((v) => v.going);
@@ -304,13 +304,15 @@ function tabLineup() {
   const males = ins.filter((v) => v.gender === 'Male'), females = ins.filter((v) => v.gender === 'Female');
   const o = (list, sel) => list.map((m) => `<option value="${m.id}" ${String(sel) === String(m.id) ? 'selected' : ''}>${esc(m.name)}</option>`).join('');
   // Each column lists its own gender first, then the other gender (for male or female duets).
+  // Anyone else (didn't mark I'm in) can be put in on the spot as a replacement.
+  const others = [...ev.votes.filter((v) => !v.going), ...ev.silent].sort((a, b) => a.name.localeCompare(b.name));
   const opts = (list, sel, none) => {
     const other = list === males ? females : males;
-    return `<option value="">${none}</option>${o(list, sel)}${other.length ? `<optgroup label="${list === males ? 'Female' : 'Male'} singers (for a ${list === males ? 'female' : 'male'} duet)">${o(other, sel)}</optgroup>` : ''}`;
+    return `<option value="">${none}</option>${o(list, sel)}${other.length ? `<optgroup label="${list === males ? 'Female' : 'Male'} singers (for a ${list === males ? 'female' : 'male'} duet)">${o(other, sel)}</optgroup>` : ''}${others.length ? `<optgroup label="Not marked in (replacement)">${o(others, sel)}</optgroup>` : ''}`;
   };
   const per = {};
   for (const r of draft.rows) for (const k of ['male', 'female']) if (r[k]) per[r[k]] = (per[r[k]] || 0) + 1;
-  return `<div class="card-head" style="margin-bottom:8px"><p class="muted" style="margin:0">Pick the male singer, choose his partner from the dropdown and the song. Leave one side empty for a solo. For a male duet or female duet, pick the second singer from the lower part of the dropdown. Song suggestions come from both singers' choices.</p>
+  return `<div class="card-head" style="margin-bottom:8px"><p class="muted" style="margin:0">Pick the male singer, choose his partner from the dropdown and the song. Leave one side empty for a solo. <b>This pairing list is final:</b> on the day, change a dropdown if someone doesn't turn up – songs are counted from it automatically at 00:01 after the event. For a male duet or female duet, pick the second singer from the lower part of the dropdown. Song suggestions come from both singers' choices.</p>
       <div class="actions"><button type="button" class="btn btn-ghost btn-sm" data-act="lu-template">⬇ Template</button><button type="button" class="btn btn-ghost btn-sm" data-act="lu-upload">⬆ Upload Excel</button><button type="button" class="btn btn-ghost btn-sm" data-act="lu-download">⬇ Download Excel</button></div></div>
     <div class="table-wrap"><table class="data lineup-edit"><thead><tr><th>#</th><th>Male singer</th><th>Female singer</th><th>Song</th><th>Movie / album</th><th></th></tr></thead><tbody>
       ${draft.rows.map((r, i) => `<tr data-i="${i}"><td class="muted">${i + 1}</td>
@@ -350,7 +352,7 @@ async function saveLineup(publish) {
   const rows = draft.rows.filter((r) => r.male || r.female || r.title.trim()).map((r) => ({ male: r.male ? Number(r.male) : null, female: r.female ? Number(r.female) : null, title: r.title, album: r.album }));
   const r = await App.api(`api/admin/events/${ev.event.id}/lineup`, { method: 'PUT', body: { rows, publish: publish || ev.event.published ? true : undefined } });
   if (!r.ok) return App.toast(r.errors.join(' · '), 'error');
-  App.toast(publish && !ev.event.published ? `Line-up published – ${r.rows} songs. Share "Line-up ready" in the group.` : `Line-up saved – ${r.rows} songs`, 'ok');
+  App.toast(publish && !ev.event.published ? `Line-up published – ${r.rows} songs. Share "Line-up ready" in the group.` : `Line-up saved – ${r.rows} songs${r.recounted ? ` · song counts updated (${r.recounted.songs} songs)` : ''}`, 'ok');
   draft = null;
   await refresh();
 }
