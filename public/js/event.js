@@ -121,7 +121,7 @@ $('joinForm').addEventListener('submit', async (e) => {
   btn.disabled = true;
   try {
     const r = await App.api(`api/events/${ev.id}/vote`, { method: 'POST', body });
-    if (r.new_pin) alert(`Welcome to Demo Studio! 🎤\n\nYour member no: ${r.member_no}\nYour PIN: ${r.new_pin} (last 4 digits of your phone)\n\nNext time just open this link – you'll stay logged in on this phone.`);
+    if (r.new_pin) alert(`Welcome to Manik’s Demo Website! 🎤\n\nYour member no: ${r.member_no}\nYour PIN: ${r.new_pin} (last 4 digits of your phone)\n\nNext time just open this link – you'll stay logged in on this phone.`);
     App.toast(!going ? 'Thanks for letting us know' : r.saved && (r.saved.solo || r.saved.duet) ? `You're in! ${r.saved.solo + r.saved.duet} song${r.saved.solo + r.saved.duet === 1 ? '' : 's'} saved 🎤` : 'You\'re in! 🎤 Add your songs any time', 'ok');
     ev = r.event;
     await load();

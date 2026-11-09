@@ -14,20 +14,23 @@ const waNum = (p) => { const d = String(p || '').replace(/\D/g, ''); return d.le
 const wa = (phone, text) => `https://wa.me/${waNum(phone)}?text=${encodeURIComponent(text)}`;
 const first = (n) => String(n || '').split(' ')[0];
 const today = () => App.ymd(new Date());
+// Studio-specific features switched on in Admin → Settings → Features (no feature = always on).
+const on = (f) => !f || settings['show_' + f] === '1';
 
 const VIEWS = {
   home: { title: 'Dashboard', render: viewHome },
-  event: { title: 'Weekly event', render: viewEvent },
-  lineup: { title: 'Line-up', render: viewLineup, nav: 'event' },
-  fees: { title: 'Fees & payments', render: viewFees },
-  members: { title: 'Singers', render: viewMembers },
+  event: { title: 'Weekly event', render: viewEvent, feat: 'weekly_event' },
+  lineup: { title: 'Line-up', render: viewLineup, nav: 'event', feat: 'weekly_event' },
+  fees: { title: 'Fees & payments', render: viewFees, feat: 'membership' },
+  members: { title: 'Singers', render: viewMembers, feat: 'membership' },
   bookings: { title: 'Bookings', render: viewBookings },
   full: { title: 'All admin tools', frame: 'admin.html' },
 };
 
 // ---------- start / login ----------
 async function boot() {
-  App.settings().then((s) => { settings = s; }).catch(() => {});
+  settings = await App.settings().catch(() => ({}));
+  App.applyFeatures(settings);
   const { admin } = await App.api('api/admin/me').catch(() => ({ admin: false }));
   $('loginScreen').classList.toggle('hidden', admin);
   $('shell').classList.toggle('hidden', !admin);
@@ -67,7 +70,8 @@ $('forgotLink').onclick = async (e) => {
 // ---------- navigation ----------
 function route() {
   if ($('shell').classList.contains('hidden')) return;
-  const key = VIEWS[location.hash.slice(1).split('/')[0]] ? location.hash.slice(1).split('/')[0] : 'home';
+  const want = VIEWS[location.hash.slice(1).split('/')[0]];
+  const key = want && on(want.feat) ? location.hash.slice(1).split('/')[0] : 'home';
   const v = VIEWS[key];
   $('viewTitle').textContent = v.title;
   document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('on', a.dataset.nav === (v.nav || key)));
@@ -144,22 +148,22 @@ function viewHome() {
   const slot = (s) => (App.slotInfo(settings)[s] || {}).name || s;
   $('view').innerHTML = `
     <section class="app-hello"><h2>Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'} 👋</h2><p>${dDay(t)}</p></section>
-    <section class="app-stats app-stats-4">
-      <a href="#fees"><small>Payments to confirm</small><b>${claims.length}</b><span>UPI "I've paid"</span></a>
-      <a href="#fees"><small>Fees unpaid</small><b>${unpaid.length}</b><span>${overdue.length} overdue</span></a>
+    <section class="app-stats ${on('membership') ? 'app-stats-4' : ''}">
+      ${on('membership') ? `<a href="#fees"><small>Payments to confirm</small><b>${claims.length}</b><span>UPI "I've paid"</span></a>
+      <a href="#fees"><small>Fees unpaid</small><b>${unpaid.length}</b><span>${overdue.length} overdue</span></a>` : ''}
       <a href="#bookings"><small>Bookings to approve</small><b>${pending.length}</b><span>${todays.length} today</span></a>
-      <a href="#members"><small>Singers</small><b>${cache.members.length}</b><span>${upgrades.length} upgrade request${upgrades.length === 1 ? '' : 's'}</span></a>
+      ${on('membership') ? `<a href="#members"><small>Singers</small><b>${cache.members.length}</b><span>${upgrades.length} upgrade request${upgrades.length === 1 ? '' : 's'}</span></a>` : ''}
     </section>
-    ${ev ? `<section class="app-card"><div class="app-card-head"><h3>🎤 ${esc(ev.title)}</h3><a href="#event">Manage ›</a></div>
+    ${!on('weekly_event') ? '' : ev ? `<section class="app-card"><div class="app-card-head"><h3>🎤 ${esc(ev.title)}</h3><a href="#event">Manage ›</a></div>
       <p class="muted" style="margin:0 0 10px">📅 ${dDay(ev.event_date)}${ev.event_time ? ` · ${esc(ev.event_time)}` : ''}</p>
       <div class="app-row">${ev.done ? '<span class="app-pill ok">✔ Counted</span>' : ev.voting_open ? '<span class="app-pill ok">Open for singers</span>' : '<span class="app-pill">Closed</span>'}
         ${ev.published ? '<span class="app-pill ok">Line-up published</span>' : '<span class="app-pill warn">Line-up not published</span>'}</div>
       <div class="app-weeks" style="margin-top:12px"><div><small>In</small><b>${ev.going}</b></div><div><small>Out</small><b>${ev.not_going}</b></div><div><small>Sent songs</small><b>${ev.sent_songs}</b></div><div><small>Line-up</small><b>${ev.lineup}</b></div></div></section>`
       : '<section class="app-card"><h3>🎤 No event yet</h3><a class="btn btn-primary btn-block" href="#event">Create this week\'s event</a></section>'}
-    ${claims.length ? `<section class="app-card"><div class="app-card-head"><h3>💰 Confirm payments</h3><a href="#fees">All ›</a></div>${claims.slice(0, 3).map(claimRow).join('')}</section>` : ''}
+    ${on('membership') && claims.length ? `<section class="app-card"><div class="app-card-head"><h3>💰 Confirm payments</h3><a href="#fees">All ›</a></div>${claims.slice(0, 3).map(claimRow).join('')}</section>` : ''}
     ${todays.length || pending.length ? `<section class="app-card"><div class="app-card-head"><h3>📅 Bookings</h3><a href="#bookings">All ›</a></div>
       ${[...pending, ...todays.filter((b) => b.status !== 'pending')].slice(0, 4).map((b) => `<div class="app-item"><div><b>${esc(b.name)}</b><small>${dDay(b.date)} · ${esc(slot(b.slot))}</small></div><span class="app-pill ${b.status === 'pending' ? 'warn' : 'ok'}">${b.status === 'pending' ? 'To approve' : 'Today'}</span></div>`).join('')}</section>` : ''}
-    ${upgrades.length ? `<section class="app-card"><h3>⭐ Upgrade requests</h3>${upgrades.map((m) => `<div class="app-item"><div><b>${esc(m.name)}</b><small>${esc(m.plan_name)} → ${esc(m.requested.name)} · ${m.month_count} songs this month</small></div><a class="btn btn-ghost btn-sm" href="#full">Open</a></div>`).join('')}</section>` : ''}`;
+    ${on('membership') && upgrades.length ? `<section class="app-card"><h3>⭐ Upgrade requests</h3>${upgrades.map((m) => `<div class="app-item"><div><b>${esc(m.name)}</b><small>${esc(m.plan_name)} → ${esc(m.requested.name)} · ${m.month_count} songs this month</small></div><a class="btn btn-ghost btn-sm" href="#full">Open</a></div>`).join('')}</section>` : ''}`;
 }
 
 // ---------- Fees & payments ----------
@@ -174,7 +178,7 @@ function viewFees() {
   const unpaid = cache.members.filter((m) => m.fee_due > 0).sort((a, b) => (b.fee.status === 'overdue') - (a.fee.status === 'overdue') || b.fee_due - a.fee_due);
   const paid = cache.members.filter((m) => m.fee.status === 'paid');
   const total = cache.members.reduce((a, m) => a + (m.fee.status === 'paid' ? m.fee.amount : 0), 0);
-  const msg = (m) => `Hi ${first(m.name)}, a gentle reminder from Demo Studio: your membership fee of ${money(m.fee_due)} (${monthName(m.fee.month)}) is due before ${dShort(m.fee.due_date)}. Pay by GPay/UPI to ${settings.upi_id || '9962258845@okbizaxis'} or in the app: ${new URL('app.html#pay', location.href).href}\nThank you! 🎤`;
+  const msg = (m) => `Hi ${first(m.name)}, a gentle reminder from Manik’s Demo Website: your membership fee of ${money(m.fee_due)} (${monthName(m.fee.month)}) is due before ${dShort(m.fee.due_date)}. Pay by GPay/UPI to ${settings.upi_id || 'demo@upi'} or in the app: ${new URL('app.html#pay', location.href).href}\nThank you! 🎤`;
   $('view').innerHTML = `
     <section class="app-stats"><div><small>${monthName(cache.members[0] ? cache.members[0].month : today().slice(0, 7), { month: 'long' })} collected</small><b>${money(total)}</b><span>${paid.length} paid</span></div>
       <div><small>Still to pay</small><b>${unpaid.length}</b><span>${money(unpaid.reduce((a, m) => a + m.fee_due, 0))}</span></div></section>
@@ -343,7 +347,7 @@ const eventFormHtml = (e) => `<div class="app-evform">
   <label class="ev-label">Title</label><input class="ev-input" data-ef="title" value="${esc(e.title || 'Weekly Karaoke Night')}">
   <label class="ev-label">Date</label><input class="ev-input" type="date" data-ef="event_date" value="${esc(e.event_date || nextSunday())}">
   <label class="ev-label">Time</label><input class="ev-input" data-ef="event_time" value="${esc(e.event_time || '')}" placeholder="6:30 PM">
-  <label class="ev-label">Venue</label><input class="ev-input" data-ef="venue" value="${esc(e.venue || 'Demo Studio')}">
+  <label class="ev-label">Venue</label><input class="ev-input" data-ef="venue" value="${esc(e.venue || 'Manik’s Demo Website')}">
   <label class="ev-label">Notes for singers</label><textarea class="ev-input" data-ef="notes" rows="2">${esc(e.notes || '')}</textarea>
   ${e.id ? `<label class="ev-label">Video link (Google Drive)</label><input class="ev-input" data-ef="video_link" value="${esc(e.video_link || '')}" placeholder="https://drive.google.com/…">` : ''}
   <button type="button" class="btn btn-primary btn-block" data-efsave style="margin-top:12px">${e.id ? 'Save details' : 'Create event'}</button></div>`;
@@ -369,7 +373,7 @@ function takeOut(id) {
     <label class="ev-label">Message</label><textarea class="ev-input" name="note" rows="3" maxlength="300" placeholder="Sorry, the list is full this week – see you next Sunday!"></textarea>
     <label class="app-check"><input type="checkbox" name="wa" value="1" checked> Also send it on WhatsApp</label>`, async (f) => {
     await App.api(`api/admin/events/${e.id}/votes/${id}`, { method: 'PUT', body: { going: false, admin_out: true, note: f.note } });
-    if (f.wa) window.open(wa(m.phone, `Hi ${first(m.name)}, about ${e.title} (${dDay(e.event_date)}): ${f.note || "you've been taken off this week's list."}\n\n– Demo Studio`), '_blank', 'noopener');
+    if (f.wa) window.open(wa(m.phone, `Hi ${first(m.name)}, about ${e.title} (${dDay(e.event_date)}): ${f.note || "you've been taken off this week's list."}\n\n– Manik’s Demo Website`), '_blank', 'noopener');
     App.toast(`${m.name} taken out`, 'ok'); refreshEvent();
   }, 'Take out');
 }

@@ -217,15 +217,15 @@ function verifyPassword(password, stored) {
 }
 
 const DEFAULT_SETTINGS = {
-  studio_name: 'Demo Studio',
+  studio_name: 'Manik’s Demo Website',
   tagline: 'Plug in. Play loud. Make memories.',
-  phone: '+91 99622 58845',
-  whatsapp: '919962258845',
-  email: 'rhythmmusicals2024@gmail.com',
+  phone: '+91 98417 96046',
+  whatsapp: '919841796046',
+  email: 'demo@example.com',
   owner_email: '',
-  admin_email: 'rythmrehearsalstudio@gmail.com', // "Forgot password" reset links for the admin go here
-  address: '91C, 11th West Street, Metha Nagar, Kundrathur, Chennai, Tamil Nadu 600069',
-  map_link: 'https://www.google.com/maps/search/?api=1&query=Rhythm+Rehearsal+Studio+Kundrathur+Chennai+600069',
+  admin_email: '', // "Forgot password" reset links for the admin go here
+  address: '12, Demo Street, Sample Nagar, Chennai, Tamil Nadu 600001',
+  map_link: 'https://www.google.com/maps/search/?api=1&query=Chennai',
   currency: '₹',
   price_half: '2500',
   price_full: '4500',
@@ -237,7 +237,7 @@ const DEFAULT_SETTINGS = {
   booking_window_days: '120',
   about_title: 'A home for every band, every sound',
   about_text:
-    'Demo Studio is a fully air-conditioned, acoustically treated rehearsal space built by musicians, for musicians. ' +
+    'Manik’s Demo Website is a fully air-conditioned, acoustically treated rehearsal space built by musicians, for musicians. ' +
     'Whether you are a five-piece rock band tightening a setlist, a choir preparing for a concert, or a group of friends ' +
     'celebrating with a jam night, our room is ready the moment you walk in.\n\n' +
     'Book a half day for a focused rehearsal, or take the whole day for workshops, music meets, album pre-production ' +
@@ -270,11 +270,14 @@ const DEFAULT_SETTINGS = {
   ]),
   membership_due_day: '10',
   // UPI payment details shown to singers (QR image in public/img/upi-qr.png).
-  upi_id: '9962258845@okbizaxis',
-  upi_name: 'Demo Studio',
+  upi_id: 'demo@upi',
+  upi_name: 'Manik’s Demo Website',
   events_keep_weeks: '13', // weekly events older than this are offered for deletion // monthly fee must be paid by this day of the month
   instagram: 'https://instagram.com',
   youtube: 'https://youtube.com',
+  // Studio-specific features, hidden from the menus unless switched on in Admin → Settings → Features.
+  show_membership: '0', // singers' membership: Membership page, Singer app, Member login, admin Members / fees
+  show_weekly_event: '0', // weekly singing event: Weekly Event page and admin Weekly Events
 };
 
 function seed() {

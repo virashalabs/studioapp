@@ -55,8 +55,8 @@ const App = (() => {
     const links = [
       ['home', './', 'Home'],
       ['book', 'book.html', 'Book a Slot'],
-      ['member', 'member.html', 'Membership'],
-      ['event', 'event.html', 'Weekly Event'],
+      ['member', 'member.html', 'Membership', 'membership'],
+      ['event', 'event.html', 'Weekly Event', 'weekly_event'],
       ['events', './#events', 'Upcoming Jams'],
       ['gallery', 'gallery.html', 'Gallery'],
       ['about', 'about.html', 'About Us'],
@@ -77,8 +77,8 @@ const App = (() => {
           </div>
         </div>
         <nav class="subnav"><div class="wrap">
-          ${links.map(([k, href, t]) => `<a href="${href}" class="${k === active ? 'active' : ''}">${t}</a>`).join('')}
-          <span class="right"><a href="app.html">📱 Singer App</a><a href="member.html">Member Login</a><a href="book.html#lookup">My Booking</a><a href="admin.html">Studio Admin</a></span>
+          ${links.map(([k, href, t, f]) => `<a href="${href}" class="${k === active ? 'active' : ''}${f ? ' hidden' : ''}"${feat(f)}>${t}</a>`).join('')}
+          <span class="right"><a href="app.html" class="hidden" data-feat="membership">📱 Singer App</a><a href="member.html" class="hidden" data-feat="membership">Member Login</a><a href="book.html#lookup">My Booking</a><a href="admin.html">Studio Admin</a></span>
         </div></nav>`;
       header.querySelector('.header-search input').addEventListener('change', (e) => e.target.form.submit());
       const root = document.documentElement;
@@ -101,11 +101,11 @@ const App = (() => {
         </div></div>
         <div class="wrap footer-grid">
           <div>
-            <img class="footer-logo" src="img/logo.png" alt="Demo Studio" width="220" height="131">
+            <img class="footer-logo" src="img/logo.png" alt="Virasha Software Solutions" width="220" height="213">
             <p data-s="tagline"></p>
             <p>📍 <span data-s="address"></span><br>📞 <a data-tel><span data-s="phone"></span></a><br>✉️ <a data-mail><span data-s="email"></span></a></p>
           </div>
-          <div><h4>Explore</h4><ul>${links.map(([, h, t]) => `<li><a href="${h}">${t}</a></li>`).join('')}</ul></div>
+          <div><h4>Explore</h4><ul>${links.map(([, h, t, f]) => `<li${f ? ' class="hidden"' : ''}${feat(f)}><a href="${h}">${t}</a></li>`).join('')}</ul></div>
           <div><h4>Connect</h4><ul>
             <li><a data-wa target="_blank" rel="noopener">WhatsApp us</a></li>
             <li><a data-link="instagram" target="_blank" rel="noopener">Instagram</a></li>
@@ -118,7 +118,15 @@ const App = (() => {
     settings().then(fillSettings).catch(() => {});
   }
 
+  // Studio-specific features (membership, weekly event): menu items carry data-feat and stay hidden
+  // unless the matching show_<feature> setting is '1'.
+  function feat(f) { return f ? ` data-feat="${f}"` : ''; }
+  function applyFeatures(s) {
+    document.querySelectorAll('[data-feat]').forEach((el) => el.classList.toggle('hidden', (s || {})['show_' + el.dataset.feat] !== '1'));
+  }
+
   function fillSettings(s) {
+    applyFeatures(s);
     document.querySelectorAll('[data-s]').forEach((el) => { el.textContent = s[el.dataset.s] || ''; });
     document.querySelectorAll('[data-tel]').forEach((el) => { el.href = 'tel:' + (s.phone || '').replace(/\s/g, ''); });
     document.querySelectorAll('[data-mail]').forEach((el) => { el.href = 'mailto:' + s.email; });
@@ -166,7 +174,7 @@ const App = (() => {
     return { gpay: (ios ? 'gpay://upi/pay?' : 'tez://upi/pay?') + q, any: 'upi://pay?' + q, mobile };
   }
 
-  return { upiLinks, esc, api, toast, ymd, parseYmd, fmtDate, thumb, money, settings, slotInfo, renderChrome, lightbox, galleryCategories, pad };
+  return { applyFeatures, upiLinks, esc, api, toast, ymd, parseYmd, fmtDate, thumb, money, settings, slotInfo, renderChrome, lightbox, galleryCategories, pad };
 })();
 
 // Eye button on every password / PIN field to show what's being typed.

@@ -49,6 +49,7 @@ function modal(title, body, { submitText = 'Save', onSubmit, wide = false } = {}
 async function boot() {
   state.settings = await App.settings().catch(() => null);
   document.querySelectorAll('[data-s]').forEach((el) => { el.textContent = state.settings?.[el.dataset.s] || ''; });
+  App.applyFeatures(state.settings);
   const { admin, demo, super: sup } = await App.api('api/admin/me');
   state.demo = demo;
   // Superadmin: everything the admin has, plus the password panel in Settings.
@@ -716,6 +717,7 @@ $('settingsForm').addEventListener('submit', async (e) => {
     await App.api('api/admin/settings', { method: 'PUT', body });
     state.settings = await App.api('api/settings');
     document.querySelectorAll('[data-s]').forEach((el) => { el.textContent = state.settings[el.dataset.s] || ''; });
+    App.applyFeatures(state.settings);
     App.toast('Settings saved – the website is updated', 'ok');
   } catch (err) { App.toast(err.message, 'error'); }
 });
@@ -965,7 +967,7 @@ let memberModal = null;
 async function openMember(id, month) {
   const d = await App.api(`api/admin/members/${id}`);
   const m = d.member;
-  const studio = (state.settings && state.settings.studio_name) || 'Demo Studio';
+  const studio = (state.settings && state.settings.studio_name) || 'Manik’s Demo Website';
   month = month && d.months.some((x) => x.month === month) ? month : d.months[0].month;
   const songs = d.songs.filter((s) => s.sung_on.startsWith(month)).slice().reverse(); // oldest first
   const lim = month === m.month ? m.plan_limit : null;

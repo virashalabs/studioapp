@@ -144,6 +144,7 @@ const PUBLIC_SETTINGS = [
   'price_half', 'price_full', 'first_half_label', 'first_half_time', 'second_half_label',
   'second_half_time', 'full_day_time', 'booking_window_days', 'about_title', 'about_text',
   'attractions', 'instagram', 'youtube', 'gallery_categories', 'upi_id', 'upi_name',
+  'show_membership', 'show_weekly_event',
 ];
 
 app.get('/api/settings', (req, res) => {

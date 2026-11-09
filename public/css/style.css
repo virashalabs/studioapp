@@ -68,7 +68,7 @@ h1, h2, h3, h4 { margin: 0 0 .5em; line-height: 1.25; }
 .header-top { display: flex; align-items: center; gap: 24px; height: 64px; }
 .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 20px; color: var(--ink); letter-spacing: -.3px; }
 .logo-mark {
-  width: 40px; height: 40px; border-radius: 8px; background: #000; flex: none; object-fit: cover;
+  width: 40px; height: 40px; border-radius: 8px; background: #fff; flex: none; object-fit: cover;
 }
 .logo small { display: block; font-size: 11px; font-weight: 400; color: var(--muted); letter-spacing: 0; }
 .header-search { flex: 1; max-width: 520px; position: relative; }

@@ -116,14 +116,14 @@ async function loadReminders() {
 function feeText(m, d) {
   const mon = monthLabel(m.fee.month, { month: 'long' });
   const late = m.fee.status === 'overdue';
-  return `Hi ${firstName(m.name)}, a gentle reminder from Demo Studio 🎤\n\n`
+  return `Hi ${firstName(m.name)}, a gentle reminder from Manik’s Demo Website 🎤\n\n`
     + `Your ${mon} membership fee of ${App.money(m.fee_due, d.currency)} (${m.plan_name} plan) ${late ? `was due before the ${ordinal(d.due_day)} – please pay today.` : `is due before the ${ordinal(d.due_day)} ${mon}.`}\n\n`
     + `Pay by UPI: ${d.upi_id}\nOr scan the QR on your member page and send us the transaction ID: ${siteUrl('member.html')}\n\nThank you!`;
 }
 function reportText(m, d) {
   const weeks = m.weeks.map((n, i) => `W${i + 1}: ${n}`).slice(0, new Date(Number(d.month.slice(0, 4)), Number(d.month.slice(5, 7)), 0).getDate() > 28 ? 5 : 4).join(' | ');
   const songs = m.songs.map((s, i) => `${i + 1}. ${s.title}${s.album ? ` (${s.album})` : ''}`).join('\n');
-  return `Hi ${firstName(m.name)} 🎤 Your Demo Studio report for ${monthLabel(d.month)}\n\n`
+  return `Hi ${firstName(m.name)} 🎤 Your Manik’s Demo Website report for ${monthLabel(d.month)}\n\n`
     + `Plan: ${m.plan_name}${m.plan_limit == null ? ' (unlimited)' : ` (${m.plan_limit} songs / month)`}\n`
     + `Songs sung: ${m.count}\n${weeks}\n\n${songs ? `Songs:\n${songs}\n\n` : ''}`
     + `See all your songs: ${siteUrl('member.html')}`;
@@ -187,7 +187,7 @@ const eventForm = (e = {}) => `<div class="form-grid">
   <div class="field full"><label>Title <span class="req">*</span></label><input name="title" required maxlength="120" value="${esc(e.title || 'Weekly Karaoke Night')}"></div>
   <div class="field"><label>Date <span class="req">*</span></label><input name="event_date" type="date" required value="${esc(e.event_date || nextSunday())}"></div>
   <div class="field"><label>Time</label><input name="event_time" maxlength="40" placeholder="6:00 PM" value="${esc(e.event_time || '')}"></div>
-  <div class="field full"><label>Venue</label><input name="venue" maxlength="120" placeholder="Demo Studio" value="${esc(e.venue || '')}"></div>
+  <div class="field full"><label>Venue</label><input name="venue" maxlength="120" placeholder="Manik’s Demo Website" value="${esc(e.venue || '')}"></div>
   <div class="field full"><label>Notes for singers</label><textarea name="notes" maxlength="1000" placeholder="e.g. Please send songs by Friday 9 PM">${esc(e.notes || '')}</textarea></div></div>`;
 
 $('newEvent').onclick = () => modal('New weekly event', eventForm(), { submitText: 'Create event', onSubmit: async (f) => {
@@ -485,7 +485,7 @@ function takeOut(m) {
     <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" name="wa" value="1" checked> Also open WhatsApp to send this message</label>`,
   { submitText: 'Take out', onSubmit: async (f) => {
     await App.api(`api/admin/events/${e.id}/votes/${m.id}`, { method: 'PUT', body: { going: false, admin_out: true, note: f.note } });
-    const msg = `Hi ${firstName(m.name)}, about ${e.title} (${fmtEvDay(e.event_date)}): ${f.note || "you've been taken off this week's list."}\n\n– Demo Studio`;
+    const msg = `Hi ${firstName(m.name)}, about ${e.title} (${fmtEvDay(e.event_date)}): ${f.note || "you've been taken off this week's list."}\n\n– Manik’s Demo Website`;
     if (f.wa) window.open(waLink(m.phone, msg), '_blank', 'noopener');
     App.toast(`${m.name} taken out of this week`, 'ok');
     draft = null;

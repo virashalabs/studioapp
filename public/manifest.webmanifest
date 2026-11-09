@@ -1,6 +1,6 @@
 {
-  "name": "Demo Studio",
-  "short_name": "Demo Studio",
+  "name": "Manik’s Demo Website",
+  "short_name": "Manik’s Demo",
   "description": "Your songs, membership, weekly event and studio booking.",
   "start_url": "app.html",
   "scope": "./",

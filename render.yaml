@@ -37,9 +37,9 @@ services:
       # Private Storage bucket that holds db/, uploads/ and backups/
       - key: SUPABASE_BUCKET
         value: studio
-      # Main domain, e.g. rhythmrehearsalstudio.online. Set it only once that domain works over HTTPS.
+      # Main domain, e.g. yourstudio.com. Set it only once that domain works over HTTPS.
       - key: CANONICAL_HOST
         sync: false
-      # Comma-separated hosts that 301-redirect to CANONICAL_HOST, e.g. studio.virashalabs.online,www.rhythmrehearsalstudio.online
+      # Comma-separated hosts that 301-redirect to CANONICAL_HOST, e.g. www.yourstudio.com
       - key: REDIRECT_HOSTS
         sync: false

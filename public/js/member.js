@@ -44,7 +44,7 @@ async function boot() {
 
 function renderMember() {
   const m = data.member;
-  const studio = document.querySelector('[data-s="studio_name"]')?.textContent || 'Demo Studio';
+  const studio = document.querySelector('[data-s="studio_name"]')?.textContent || 'Manik’s Demo Website';
   App.settings().then((s) => { $('cardSlot').innerHTML = MemberCard.html(m, s.studio_name); }).catch(() => { $('cardSlot').innerHTML = MemberCard.html(m, studio); });
   $('heroTitle').textContent = `Hi, ${m.name.split(' ')[0]} 👋`;
   $('heroSub').textContent = `${m.member_no} · ${m.plan_name} membership · ${App.money(m.plan_price, cur)} / month`;
@@ -90,9 +90,9 @@ function renderMember() {
   $('payBox').classList.toggle('hidden', !(m.fee_due > 0));
   if (m.fee_due > 0) {
     App.settings().then((st) => {
-      const pa = st.upi_id || '9962258845@okbizaxis';
+      const pa = st.upi_id || 'demo@upi';
       $('upiId').textContent = pa;
-      const l = App.upiLinks({ pa, pn: st.upi_name || st.studio_name || 'Demo Studio', am: m.fee_due, tn: `${m.member_no} fee ${fee.month}` });
+      const l = App.upiLinks({ pa, pn: st.upi_name || st.studio_name || 'Manik’s Demo Website', am: m.fee_due, tn: `${m.member_no} fee ${fee.month}` });
       // On a phone: open GPay directly (or any UPI app). On a computer: scan the QR with the phone.
       $('gpayBtn').classList.toggle('hidden', !l.mobile);
       $('upiBtn').classList.toggle('hidden', !l.mobile);

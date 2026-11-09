@@ -1,6 +1,6 @@
 {
   "id": "admin-app",
-  "name": "Demo Studio Admin",
+  "name": "Manik’s Demo Website Admin",
   "short_name": "Studio Admin",
   "description": "Bookings, members, fees and the weekly event – for studio staff.",
   "start_url": "admin-app.html",

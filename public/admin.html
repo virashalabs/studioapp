@@ -42,8 +42,8 @@
         <button data-view="dashboard" class="active">📊 Dashboard</button>
         <button data-view="bookings">📋 Bookings <span class="count" id="pendingCount"></span></button>
         <button data-view="calendar">📅 Calendar &amp; Free Dates</button>
-        <button data-view="events">🗓️ Weekly Events</button>
-        <button data-view="members">🎤 Members <span class="count" id="memberAlertCount"></span></button>
+        <button data-view="events" class="hidden" data-feat="weekly_event">🗓️ Weekly Events</button>
+        <button data-view="members" class="hidden" data-feat="membership">🎤 Members <span class="count" id="memberAlertCount"></span></button>
         <button data-view="revenue">💰 Revenue</button>
         <button data-view="banners">🖼️ Banners</button>
         <button data-view="gallery">📸 Gallery</button>
@@ -243,13 +243,13 @@
                   <div class="field"><label>WhatsApp number (with country code, digits only)</label><input name="whatsapp"></div>
                   <div class="field"><label>Public email</label><input name="email" type="email"></div>
                   <div class="field"><label>Owner email (booking notifications)</label><input name="owner_email" type="email" placeholder="Defaults to public email"></div>
-                  <div class="field"><label>Admin email (forgot-password links)</label><input name="admin_email" type="email" placeholder="rythmrehearsalstudio@gmail.com"></div>
+                  <div class="field"><label>Admin email (forgot-password links)</label><input name="admin_email" type="email" placeholder="admin@example.com"></div>
                   <div class="field full"><label>Address</label><input name="address"></div>
                   <div class="field full"><label>Google Maps link</label><input name="map_link"></div>
                   <div class="field"><label>Instagram URL</label><input name="instagram"></div>
                   <div class="field"><label>YouTube URL</label><input name="youtube"></div>
-                  <div class="field"><label>UPI ID (membership fees)</label><input name="upi_id" placeholder="9962258845@okbizaxis"></div>
-                  <div class="field"><label>UPI payee name</label><input name="upi_name" placeholder="Demo Studio"></div>
+                  <div class="field"><label>UPI ID (membership fees)</label><input name="upi_id" placeholder="demo@upi"></div>
+                  <div class="field"><label>UPI payee name</label><input name="upi_name" placeholder="Manik’s Demo Website"></div>
                 </div>
               </div>
               <div class="card">
@@ -271,6 +271,14 @@
                 <div class="field"><label>Heading</label><input name="about_title"></div>
                 <div class="field" style="margin-top:12px"><label>About text</label><textarea name="about_text" style="min-height:200px"></textarea></div>
                 <div class="field" style="margin-top:12px"><label>Gallery sections (comma-separated, in display order)</label><input name="gallery_categories" placeholder="Live Room, Audio System, Mixing Desk, …"></div>
+              </div>
+              <div class="card">
+                <h3>Features</h3>
+                <p class="muted" style="font-size:13px;margin:0 0 12px">Studio-specific sections. When hidden, they disappear from the website, admin and admin-app menus; nothing is deleted.</p>
+                <div class="form-grid">
+                  <div class="field"><label>Membership (singers, fees, Singer app)</label><select name="show_membership"><option value="0">Hidden</option><option value="1">Shown</option></select></div>
+                  <div class="field"><label>Weekly event</label><select name="show_weekly_event"><option value="0">Hidden</option><option value="1">Shown</option></select></div>
+                </div>
               </div>
               <div class="card">
                 <div class="card-head"><h3>Studio attractions</h3><button type="button" class="btn btn-ghost btn-sm" id="addAttr">+ Add</button></div>
