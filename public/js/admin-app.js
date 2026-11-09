@@ -31,7 +31,9 @@ const VIEWS = {
 async function boot() {
   settings = await App.settings().catch(() => ({}));
   App.applyFeatures(settings);
-  const { admin } = await App.api('api/admin/me').catch(() => ({ admin: false }));
+  const { admin, demo } = await App.api('api/admin/me').catch(() => ({ admin: false }));
+  $('demoHint').classList.toggle('hidden', !demo);
+  $('forgotLink').classList.toggle('hidden', !!demo);
   $('loginScreen').classList.toggle('hidden', admin);
   $('shell').classList.toggle('hidden', !admin);
   if (admin) { await loadAll(); route(); }

@@ -61,12 +61,12 @@ async function boot() {
   if (sup) loadClearOpts();
   $('superBadge').classList.toggle('hidden', !sup);
   $('demoNote').classList.toggle('hidden', !demo);
-  $('pwField').classList.toggle('hidden', demo);
+  // Demo: the fields stay visible (the superadmin signs in with them), but the admin can leave them empty.
   $('pw').required = !demo;
   $('user').required = !demo;
-  $('loginBtn').textContent = demo ? 'Proceed to Admin Dashboard →' : 'Log in';
-  // Demo: the admin needs no password, but the superadmin still signs in with username + password.
-  $('superLink').classList.toggle('hidden', !demo);
+  $('user').placeholder = demo ? 'Leave empty for the demo' : '';
+  $('pw').placeholder = demo ? 'No password needed' : '';
+  $('loginBtn').textContent = demo ? 'Log in →' : 'Log in';
   $('forgotWrap').classList.toggle('hidden', demo);
   $('demoPill').classList.toggle('hidden', !demo);
   $('demoBanner').classList.toggle('hidden', !demo);
@@ -74,16 +74,6 @@ async function boot() {
   $('app').classList.toggle('hidden', !admin);
   if (admin) startApp();
 }
-
-$('superLink').addEventListener('click', (e) => {
-  e.preventDefault();
-  $('pwField').classList.remove('hidden');
-  $('demoNote').classList.add('hidden');
-  $('user').required = true; $('pw').required = true;
-  $('user').value = 'superadmin';
-  $('loginBtn').textContent = 'Log in as superadmin';
-  $('pw').focus();
-});
 
 $('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
