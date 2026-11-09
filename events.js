@@ -264,19 +264,33 @@ module.exports = function mountEvents(app, { notify, members }) {
     const errors = [], out = [];
     // The admin screen sends member ids; an Excel sheet has member no., phone or name.
     const resolve = (v) => (req.body.from_excel ? findMember(v) : db.prepare('SELECT * FROM members WHERE id = ?').get(Number(v)));
+    // Same-gender duets (two male or two female singers) are allowed. From Excel we ask once to be sure it
+    // isn't a typo: answers come back as confirm (row indexes to keep) / skip (row indexes to leave out).
+    const confirm = new Set((req.body.confirm || []).map(Number)), skip = new Set((req.body.skip || []).map(Number));
+    const questions = [];
     rows.forEach((r, i) => {
       const line = req.body.from_excel ? `Row ${i + 2}` : `Line ${i + 1}`;
       const title = clean(r.title, 120);
-      const male = r.male ? resolve(r.male) : null, female = r.female ? resolve(r.female) : null;
+      const a = r.male ? resolve(r.male) : null, b = r.female ? resolve(r.female) : null;
       if (!title && !r.male && !r.female) return; // empty row
-      if (r.male && !male) return errors.push(`${line}: male singer "${r.male}" not found.`);
-      if (r.female && !female) return errors.push(`${line}: female singer "${r.female}" not found.`);
-      if (male && male.gender !== 'Male') return errors.push(`${line}: ${male.name} is not a male singer.`);
-      if (female && female.gender !== 'Female') return errors.push(`${line}: ${female.name} is not a female singer.`);
-      if (!male && !female) return errors.push(`${line}: choose at least one singer.`);
+      if (skip.has(i)) return;
+      if (r.male && !a) return errors.push(`${line}: singer "${r.male}" not found.`);
+      if (r.female && !b) return errors.push(`${line}: singer "${r.female}" not found.`);
+      if (!a && !b) return errors.push(`${line}: choose at least one singer.`);
       if (!title) return errors.push(`${line}: song name is empty.`);
+      if (a && b && a.id === b.id) return errors.push(`${line}: the same singer is in both columns.`);
+      let male = a, female = b;
+      if (a && b && a.gender !== b.gender) { male = a.gender === 'Female' ? b : a; female = a.gender === 'Female' ? a : b; }
+      else if (!a || !b) { const one = a || b; male = one.gender === 'Female' ? null : one; female = one.gender === 'Female' ? one : null; }
+      else if (req.body.from_excel && !confirm.has(i)) {
+        const g = a.gender === 'Female' ? 'Female' : 'Male';
+        const t = String(r.duet_type || '').trim().toLowerCase();
+        const said = t.startsWith(g.toLowerCase()) || t === g[0].toLowerCase() || t === 'yes' || t.startsWith('same');
+        if (!said) return questions.push({ row: i, gender: g, text: `${line}: ${a.name} & ${b.name} – "${title}". Is it a ${g} duet?` });
+      }
       out.push({ male: male && male.id, female: female && female.id, title, album: clean(r.album, 120) || null });
     });
+    if (questions.length) return res.json({ ok: !errors.length, rows: out.length, errors, questions, dry_run: true });
     if (errors.length || req.body.dry_run) return res.json({ ok: !errors.length, rows: out.length, errors, dry_run: !!req.body.dry_run });
     db.exec('BEGIN');
     db.prepare('DELETE FROM event_pairs WHERE event_id = ?').run(e.id);

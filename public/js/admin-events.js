@@ -39,15 +39,18 @@ async function xlImport({ title, map, send, describe, after }) {
   try { rows = await xlRead(file, map); } catch { return App.toast('Could not read that file – please use the template (.xlsx)', 'error'); }
   if (!rows.length) return App.toast('No rows found under the header row', 'error');
   const check = await send(rows, true);
-  const errs = check.errors || [];
+  const errs = check.errors || [], qs = check.questions || [];
   modal(title, `
     <p><b>${esc(file.name)}</b> – ${rows.length} row${rows.length === 1 ? '' : 's'} read.</p>
     <p>${describe(check)}</p>
+    ${qs.length ? `<div class="alert alert-warn" style="margin:0 0 10px"><b>Please confirm</b> – tick the ones that are right (unticked rows are left out):
+      ${qs.map((q) => `<label style="display:flex;gap:8px;align-items:flex-start;margin-top:8px"><input type="checkbox" name="q${q.row}" value="1" checked> <span>${esc(q.text)} <b>Yes, ${esc(q.gender.toLowerCase())} duet</b></span></label>`).join('')}</div>` : ''}
     ${errs.length ? `<div class="alert alert-error" style="margin:0"><b>${errs.length} problem${errs.length === 1 ? '' : 's'}</b> – fix these in the sheet and upload again:
       <ul style="margin:6px 0 0;padding-left:18px">${errs.slice(0, 30).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>${errs.length > 30 ? `<p>…and ${errs.length - 30} more</p>` : ''}</div>` : ''}`,
-  { submitText: errs.length ? 'Close' : 'Save', onSubmit: async () => {
+  { submitText: errs.length ? 'Close' : 'Save', onSubmit: async (f) => {
     if (errs.length && !check.partial_ok) return true;
-    const r = await send(rows, false);
+    const answers = { confirm: qs.filter((q) => f['q' + q.row]).map((q) => q.row), skip: qs.filter((q) => !f['q' + q.row]).map((q) => q.row) };
+    const r = await send(rows, false, answers);
     App.toast(describe(r).replace(/<[^>]+>/g, ''), 'ok');
     reload();
     if (after) await after();
@@ -298,10 +301,15 @@ function tabLineup() {
   }
   if (!draft.rows.length) draft.rows.push({ male: '', female: '', title: '', album: '' });
   const males = ins.filter((v) => v.gender === 'Male'), females = ins.filter((v) => v.gender === 'Female');
-  const opts = (list, sel, none) => `<option value="">${none}</option>${list.map((m) => `<option value="${m.id}" ${String(sel) === String(m.id) ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}`;
+  const o = (list, sel) => list.map((m) => `<option value="${m.id}" ${String(sel) === String(m.id) ? 'selected' : ''}>${esc(m.name)}</option>`).join('');
+  // Each column lists its own gender first, then the other gender (for male or female duets).
+  const opts = (list, sel, none) => {
+    const other = list === males ? females : males;
+    return `<option value="">${none}</option>${o(list, sel)}${other.length ? `<optgroup label="${list === males ? 'Female' : 'Male'} singers (for a ${list === males ? 'female' : 'male'} duet)">${o(other, sel)}</optgroup>` : ''}`;
+  };
   const per = {};
   for (const r of draft.rows) for (const k of ['male', 'female']) if (r[k]) per[r[k]] = (per[r[k]] || 0) + 1;
-  return `<div class="card-head" style="margin-bottom:8px"><p class="muted" style="margin:0">Pick the male singer, choose his partner from the dropdown and the song. Leave one side empty for a solo. Song suggestions come from both singers' choices.</p>
+  return `<div class="card-head" style="margin-bottom:8px"><p class="muted" style="margin:0">Pick the male singer, choose his partner from the dropdown and the song. Leave one side empty for a solo. For a male duet or female duet, pick the second singer from the lower part of the dropdown. Song suggestions come from both singers' choices.</p>
       <div class="actions"><button type="button" class="btn btn-ghost btn-sm" data-act="lu-template">⬇ Template</button><button type="button" class="btn btn-ghost btn-sm" data-act="lu-upload">⬆ Upload Excel</button><button type="button" class="btn btn-ghost btn-sm" data-act="lu-download">⬇ Download Excel</button></div></div>
     <div class="table-wrap"><table class="data lineup-edit"><thead><tr><th>#</th><th>Male singer</th><th>Female singer</th><th>Song</th><th>Movie / album</th><th></th></tr></thead><tbody>
       ${draft.rows.map((r, i) => `<tr data-i="${i}"><td class="muted">${i + 1}</td>
@@ -320,6 +328,7 @@ function tabLineup() {
     </div>
     ${ins.length ? `<p class="muted" style="font-size:13px">Songs per singer: ${ins.map((m) => `${esc(firstName(m.name))} ${per[m.id] || 0}`).join(' · ')}</p>` : '<p class="muted">No singers are in yet.</p>'}`;
 }
+const genderOf = (id) => ((ev.votes.find((v) => v.id === Number(id)) || {}).gender === 'Female' ? 'Female' : 'Male');
 function suggestions(r) {
   const out = [];
   for (const id of [r.male, r.female].filter(Boolean).map(Number)) {
@@ -416,16 +425,22 @@ async function onEventClick(e) {
       case 'lu-save': return saveLineup(false);
       case 'lu-publish': return saveLineup(true);
       case 'lu-template':
-        return xlDownload('lineup-template.xlsx', 'Line-up', ['Male Singer', 'Female Singer', 'Song', 'Movie'], [
-          ['Ravi Kumar', 'Seetha Raman', 'Uyire Uyire', 'Bombay'], ['RRS1003', '9840022334', 'Vennilave Vennilave', 'Minsara Kanavu'], ['Ravi Kumar', '', 'Ilaya Nila (solo)', 'Payanangal Mudivathillai']]);
+        return xlDownload('lineup-template.xlsx', 'Line-up', ['Singer 1', 'Singer 2', 'Song', 'Movie', 'Duet Type'], [
+          ['Ravi Kumar', 'Seetha Raman', 'Uyire Uyire', 'Bombay', 'Male-Female'], ['RRS1003', '9840022334', 'Vennilave Vennilave', 'Minsara Kanavu', ''],
+          ['Ravi Kumar', 'RRS1005', '(a male duet song)', '', 'Male duet'], ['Seetha Raman', '9841022334', '(a female duet song)', '', 'Female duet'],
+          ['Ravi Kumar', '', 'Ilaya Nila', 'Payanangal Mudivathillai', 'Solo']]);
       case 'lu-download':
-        return xlDownload(`lineup-${ev.event.event_date}.xlsx`, 'Line-up', ['Male Singer', 'Female Singer', 'Song', 'Movie'],
-          ev.lineup.map((r) => [r.male_id ? labelOf(r.male_id) || r.male_name : '', r.female_id ? labelOf(r.female_id) || r.female_name : '', r.title, r.album || '']));
+        return xlDownload(`lineup-${ev.event.event_date}.xlsx`, 'Line-up', ['Singer 1', 'Singer 2', 'Song', 'Movie', 'Duet Type'],
+          ev.lineup.map((r) => {
+            const g = [r.male_id, r.female_id].filter(Boolean).map(genderOf);
+            return [r.male_id ? labelOf(r.male_id) || r.male_name : '', r.female_id ? labelOf(r.female_id) || r.female_name : '', r.title, r.album || '',
+              g.length < 2 ? 'Solo' : g[0] !== g[1] ? 'Male-Female' : `${g[0]} duet`];
+          }));
       case 'lu-upload':
         return xlImport({
           title: 'Upload line-up',
-          map: { malesinger: 'male', male: 'male', femalesinger: 'female', female: 'female', song: 'title', songname: 'title', movie: 'album', moviealbum: 'album', album: 'album' },
-          send: (rows, dry) => App.api(`api/admin/events/${id}/lineup`, { method: 'PUT', body: { rows, dry_run: dry, from_excel: true } }),
+          map: { malesinger: 'male', male: 'male', singer1: 'male', femalesinger: 'female', female: 'female', singer2: 'female', duettype: 'duet_type', song: 'title', songname: 'title', movie: 'album', moviealbum: 'album', album: 'album' },
+          send: (rows, dry, answers) => App.api(`api/admin/events/${id}/lineup`, { method: 'PUT', body: { rows, dry_run: dry, from_excel: true, ...(answers || {}) } }),
           describe: (r) => (r.dry_run ? `<b>${r.rows}</b> line-up songs found. Saving replaces the current line-up.` : `Line-up uploaded – ${r.rows} songs`),
           after: () => { draft = null; return refresh(); },
         });
