@@ -30,6 +30,7 @@ async function download(p) {
   const r = await fetch(objUrl(p), { headers: headers() });
   if (r.status === 404 || r.status === 400) {
     const body = await r.text();
+    if (/bucket/i.test(body)) throw new Error(`Supabase bucket "${BUCKET}" not found – create it in Storage`);
     if (r.status === 404 || /not.?found/i.test(body)) return null; // object doesn't exist
     throw new Error(`Supabase download ${p}: ${r.status} ${body}`);
   }
