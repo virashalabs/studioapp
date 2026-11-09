@@ -81,11 +81,25 @@ function renderMember() {
   const feeMsg = {
     paid: `<div class="alert alert-ok" style="margin:0">✅ ${monthName(fee.month)} fee of <b>${App.money(fee.amount, cur)}</b> paid on ${d(fee.paid_on)}.</div>`,
     due: `<div class="alert alert-warn" style="margin:0">⏳ ${monthName(fee.month)} fee <b>${App.money(fee.balance, cur)}</b>${fee.part_paid ? ' (balance after your upgrade)' : ''} – please pay before <b>${d(fee.due_date)}</b>.</div>`,
-    overdue: `<div class="alert alert-error" style="margin:0">⚠️ ${monthName(fee.month)} fee <b>${App.money(fee.balance, cur)}</b>${fee.part_paid ? ' (balance after your upgrade)' : ''} was due before <b>${d(fee.due_date)}</b>. Please pay at the studio.</div>`,
+    overdue: `<div class="alert alert-error" style="margin:0">⚠️ ${monthName(fee.month)} fee <b>${App.money(fee.balance, cur)}</b>${fee.part_paid ? ' (balance after your upgrade)' : ''} was due before <b>${d(fee.due_date)}</b>. Please pay now.</div>`,
   };
   const older = m.fees.slice(1).filter((x) => x.status !== 'paid');
   $('feeNow').innerHTML = feeMsg[fee.status] + (older.length
     ? `<div class="alert alert-error" style="margin:10px 0 0">Also unpaid: ${older.map((x) => `${monthName(x.month, { month: 'short', year: 'numeric' })} (${App.money(x.balance, cur)})`).join(', ')}</div>` : '');
+  // UPI payment (QR + app link) while anything is unpaid
+  $('payBox').classList.toggle('hidden', !(m.fee_due > 0));
+  if (m.fee_due > 0) {
+    App.settings().then((st) => {
+      const pa = st.upi_id || '9962258845@okbizaxis';
+      $('upiId').textContent = pa;
+      const q = new URLSearchParams({ pa, pn: st.upi_name || st.studio_name || 'Rhythm Rehearsal Studio', am: String(m.fee_due), cu: 'INR', tn: `${m.member_no} fee ${fee.month}` });
+      $('upiBtn').href = 'upi://pay?' + q.toString().replace(/\+/g, '%20');
+      $('upiBtn').textContent = `Pay ${App.money(m.fee_due, cur)} with UPI app`;
+    }).catch(() => {});
+    const claim = m.claims && m.claims[0];
+    $('claimNote').innerHTML = claim
+      ? `<div class="alert alert-ok" style="margin:0">⏳ Payment note sent (UTR <b>${esc(claim.ref)}</b>). The studio will confirm it shortly.</div>` : '';
+  }
   $('feeHistory').innerHTML = `<table class="song-list"><thead><tr><th>Month</th><th>Fee</th><th>Status</th></tr></thead><tbody>
     ${m.fees.map((x) => `<tr><td>${monthName(x.month, { month: 'short', year: 'numeric' })}</td><td>${App.money(x.amount, cur)}</td>
       <td>${x.status === 'paid' ? `<span style="color:var(--green)">Paid ${d(x.paid_on)}</span>` : x.status === 'overdue' ? `<span style="color:var(--accent)">Overdue${x.part_paid ? ` · ${App.money(x.balance, cur)} balance` : ''}</span>` : `<span style="color:var(--amber)">Pay before ${d(x.due_date)}</span>`}</td></tr>`).join('')}
@@ -109,6 +123,12 @@ function drawSongs() {
   $('monthChips').innerHTML = data.months.map((x) => `<button class="chip ${x.month === month ? 'on' : ''}" role="tab" aria-selected="${x.month === month}" data-month="${x.month}">
     ${monthName(x.month, { month: 'short', year: 'numeric' })} <small>${x.count}</small></button>`).join('');
   const list = data.songs.filter((s) => s.sung_on.startsWith(month)).slice().reverse(); // oldest first, so #21+ are the over-limit songs
+  // Monthly report: songs per week (days 1-7, 8-14, ...), total and plan
+  const weeks = [0, 0, 0, 0, 0];
+  for (const s of list) weeks[Math.min(4, Math.floor((Number(s.sung_on.slice(8)) - 1) / 7))]++;
+  const lastDay = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
+  $('monthReport').innerHTML = `<div class="report-weeks">${weeks.slice(0, lastDay > 28 ? 5 : 4).map((n, i) => `<div><small>Week ${i + 1}</small><b>${n}</b><small class="muted">${i * 7 + 1}–${Math.min(lastDay, i * 7 + 7)}</small></div>`).join('')}
+    <div class="total"><small>Total</small><b>${list.length}</b><small class="muted">${month === m.month ? `${esc(m.plan_name)}${m.plan_limit == null ? ' · unlimited' : ` · ${m.plan_limit} / month`}` : 'songs'}</small></div></div>`;
   const lim = month === m.month ? m.plan_limit : null;
   $('songTable').innerHTML = list.length ? `<table class="song-list"><thead><tr><th>#</th><th>Date</th><th>Song</th><th>Movie / Album</th></tr></thead><tbody>
     ${list.map((s, i) => `<tr class="${lim != null && i >= lim ? 'over' : ''}"><td class="n">${i + 1}</td>
@@ -161,6 +181,18 @@ $('usageAlert').addEventListener('click', async (e) => {
     data = await App.api('api/member/me');
     renderMember();
   } catch (err) { App.toast(err.message, 'error'); b.disabled = false; }
+});
+
+$('claimForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const ref = $('utr').value.replace(/\s+/g, '');
+  try {
+    await App.api('api/member/payment-claim', { method: 'POST', body: { ref, month: data.member.fee.status !== 'paid' ? data.member.fee.month : undefined } });
+    App.toast('Thank you! The studio will confirm your payment.', 'ok');
+    $('utr').value = '';
+    data = await App.api('api/member/me');
+    renderMember();
+  } catch (err) { App.toast(err.message, 'error'); }
 });
 
 $('profileForm').addEventListener('submit', async (e) => {

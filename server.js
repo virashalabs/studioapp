@@ -7,6 +7,7 @@ const express = require('express');
 const { db, getSettings, setSetting, hashPassword, verifyPassword } = require('./db');
 const { sendMail, bookingTable, esc } = require('./mailer');
 const mountMembers = require('./members');
+const mountEvents = require('./events');
 const persist = require('./persist');
 
 const app = express();
@@ -138,7 +139,7 @@ const PUBLIC_SETTINGS = [
   'studio_name', 'tagline', 'phone', 'whatsapp', 'email', 'address', 'map_link', 'currency',
   'price_half', 'price_full', 'first_half_label', 'first_half_time', 'second_half_label',
   'second_half_time', 'full_day_time', 'booking_window_days', 'about_title', 'about_text',
-  'attractions', 'instagram', 'youtube', 'gallery_categories',
+  'attractions', 'instagram', 'youtube', 'gallery_categories', 'upi_id', 'upi_name',
 ];
 
 app.get('/api/settings', (req, res) => {
@@ -534,7 +535,8 @@ app.post('/api/admin/password', (req, res) => {
 });
 
 // ---------- membership (singer login + admin member management) ----------
-mountMembers(app, { sign, readCookie, notify, cookiePath: COOKIE_PATH });
+const members = mountMembers(app, { sign, readCookie, notify, cookiePath: COOKIE_PATH });
+mountEvents(app, { notify, members });
 
 // ---------- errors ----------
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));

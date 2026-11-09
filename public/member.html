@@ -43,11 +43,11 @@
         <h3>Member login</h3>
         <form id="loginForm" novalidate>
           <div id="loginError" class="alert alert-error hidden"></div>
-          <div class="field"><label for="mNo">Member number</label><input id="mNo" name="member_no" placeholder="RRS1001" autocomplete="username" required style="text-transform:uppercase"></div>
+          <div class="field"><label for="mNo">Phone number or member number</label><input id="mNo" name="member_no" placeholder="98400 11223 or RRS1001" autocomplete="username" required></div>
           <div class="field" style="margin-top:12px"><label for="mPin">PIN</label><input id="mPin" name="pin" type="password" inputmode="numeric" maxlength="6" placeholder="4-digit PIN" autocomplete="current-password" required></div>
           <button class="btn btn-primary btn-block btn-lg" style="margin-top:16px">Log in</button>
         </form>
-        <p class="muted" style="font-size:13px;margin:12px 0 0">Your member number is on your membership card. Your first PIN is the last 4 digits of your phone number.</p>
+        <p class="muted" style="font-size:13px;margin:12px 0 0">Use your phone number or the member number on your card. Your first PIN is the last 4 digits of your phone number.</p>
         <div class="demo-hint">🧪 <b>Demo logins</b> (PIN <code>1234</code>):<br>
           <code>RRS1001</code> Ram – over his Budget limit ·
           <code>RRS1005</code> Arun – fee overdue ·
@@ -78,8 +78,23 @@
         <div class="panel">
           <h3>Membership fee</h3>
           <div id="feeNow"></div>
+          <div id="payBox" class="pay-box hidden">
+            <img src="img/upi-qr.png" alt="Google Pay QR code for Rhythm Rehearsal Studio" class="pay-qr" width="520" height="790">
+            <div>
+              <p style="margin:0 0 8px">Scan the QR with any UPI app, or tap the button on your phone.</p>
+              <a class="btn btn-primary btn-block" id="upiBtn">Pay with UPI app</a>
+              <p class="muted" style="font-size:13px;margin:8px 0 14px">UPI ID: <b id="upiId"></b></p>
+              <form id="claimForm" novalidate>
+                <label for="utr" style="font-size:14px;font-weight:600">Paid? Enter the UPI transaction ID (UTR)</label>
+                <div style="display:flex;gap:8px;margin-top:6px"><input id="utr" name="ref" inputmode="numeric" maxlength="40" placeholder="12-digit UTR" style="flex:1;min-width:0">
+                  <button class="btn btn-green">I've paid</button></div>
+              </form>
+              <div id="claimNote" style="margin-top:10px"></div>
+            </div>
+          </div>
           <div id="feeHistory" style="margin-top:12px"></div>
         </div>
+        <a class="panel event-cta" href="event.html">🎤 <span><b>This week's event</b><br><small class="muted">Vote, send your songs and see your line-up</small></span> <span aria-hidden="true">→</span></a>
       </div>
     </div>
 
@@ -87,6 +102,7 @@
       <div class="panel" style="margin-top:24px">
         <div class="section-head" style="margin-bottom:10px"><h3 style="margin:0">Songs you sang</h3><span class="muted" id="yearTotal"></span></div>
         <div class="month-chips" id="monthChips" role="tablist" aria-label="Month"></div>
+        <div class="month-report" id="monthReport"></div>
         <div style="overflow-x:auto" id="songTable"></div>
         <p class="muted" style="font-size:12px;margin:12px 0 0">Records are kept for 12 months.</p>
       </div>

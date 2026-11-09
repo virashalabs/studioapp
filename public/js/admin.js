@@ -91,7 +91,7 @@ App.api = async (...args) => {
 
 // ---------- navigation ----------
 const TITLES = {
-  dashboard: 'Dashboard', bookings: 'Bookings', calendar: 'Calendar & Free Dates', members: 'Members & Songs', revenue: 'Revenue',
+  dashboard: 'Dashboard', events: 'Weekly Events', bookings: 'Bookings', calendar: 'Calendar & Free Dates', members: 'Members & Songs', revenue: 'Revenue',
   banners: 'Banner Management', gallery: 'Gallery', testimonials: 'Testimonials', settings: 'Settings',
 };
 const LOADERS = {
@@ -194,7 +194,7 @@ async function refreshCounts() {
   const [stats, testis] = await Promise.all([App.api('api/admin/stats'), App.api('api/admin/testimonials')]).catch(() => [null, null]);
   if (stats) $('pendingCount').textContent = stats.pending || '';
   if (testis) $('reviewCount').textContent = testis.filter((t) => !t.approved).length || '';
-  App.api('api/admin/members').then((d) => { $('memberAlertCount').textContent = d.members.filter((m) => m.requested).length || ''; }).catch(() => {});
+  App.api('api/admin/members').then((d) => { $('memberAlertCount').textContent = d.members.filter((m) => m.requested || !m.approved || (m.claims && m.claims.length)).length || ''; }).catch(() => {});
 }
 
 // ---------- booking table + actions ----------
@@ -757,6 +757,8 @@ function memberFlags(m) {
     m.requested ? `<span class="pill pending" title="The singer asked for this upgrade">🙋 Wants ${esc(m.requested.name)}</span>` : '',
     m.over_limit && m.suggested && !m.requested ? `<span class="pill cancelled">⚠ Over limit · suggest ${esc(m.suggested.name)}</span>` : '',
     !m.active ? '<span class="pill unpaid">Expired</span>' : '',
+    !m.approved ? '<span class="pill pending" title="Joined through an event vote link">🆕 New – approve</span>' : '',
+    m.claims && m.claims.length ? `<span class="pill paid" title="Singer says they paid by UPI">💳 UPI ref ${esc(m.claims[0].ref)}</span>` : '',
   ].join(' ');
 }
 
@@ -782,7 +784,8 @@ function drawMembers() {
     (!q || [m.name, m.member_no, m.phone].some((v) => String(v || '').toLowerCase().includes(q)))
     && (!g || m.gender === g)
     && (!f || (f === 'over' && m.over_limit) || (f === 'requests' && m.requested) || (f === 'expired' && !m.active)
-      || (f === 'unpaid' && m.fee_due > 0) || (f === 'overdue' && m.fee_overdue.length)));
+      || (f === 'unpaid' && m.fee_due > 0) || (f === 'overdue' && m.fee_overdue.length)
+      || (f === 'new' && !m.approved) || (f === 'claims' && m.claims && m.claims.length)));
   $('memberTable').innerHTML = list.length ? `<table class="data"><thead><tr><th>Member</th><th>Gender</th><th>Plan</th><th>Songs this month</th><th>Fee · ${monthLabel(memberData.month, { month: 'short' })}</th><th>Valid until</th><th></th></tr></thead><tbody>
     ${list.map((m) => `<tr>
       <td><a href="#" data-mview="${m.id}"><b>${esc(m.name)}</b></a><br><small class="muted">${esc(m.member_no)} · ${esc(m.phone)}</small></td>
@@ -792,12 +795,16 @@ function drawMembers() {
       <td>${feeCell(m)}</td>
       <td style="white-space:nowrap">${fmtShort(m.valid_until)}<br>${memberFlags(m)}</td>
       <td><div class="actions"><button class="btn btn-ghost btn-sm" data-mview="${m.id}">View</button><button class="btn btn-primary btn-sm" data-msongs="${m.id}">+ Songs</button>
-        ${m.fee.status !== 'paid' ? `<button class="btn btn-green btn-sm" data-mpay="${m.id}" data-month="${m.fee.month}">Mark paid</button>` : ''}</div></td>
+        ${!m.approved ? `<button class="btn btn-outline btn-sm" data-mapprove="${m.id}">Approve</button>` : ''}
+        ${m.claims && m.claims.length ? `<button class="btn btn-green btn-sm" data-mpay="${m.id}" data-month="${m.claims[0].month}">Confirm UPI</button>`
+          : m.fee.status !== 'paid' ? `<button class="btn btn-green btn-sm" data-mpay="${m.id}" data-month="${m.fee.month}">Mark paid</button>` : ''}</div></td>
     </tr>`).join('')}</tbody></table>` : '<div class="empty">No members match.</div>';
 }
 ['mSearch', 'mGender', 'mFilter'].forEach((id) => $(id).addEventListener('input', drawMembers));
 $('memberTable').addEventListener('click', (e) => {
   const v = e.target.closest('[data-mview]'), s = e.target.closest('[data-msongs]'), pay = e.target.closest('[data-mpay]');
+  const ap = e.target.closest('[data-mapprove]');
+  if (ap) App.api(`api/admin/members/${ap.dataset.mapprove}/approve`, { method: 'POST' }).then(() => { App.toast('Singer approved', 'ok'); reload(); }).catch((err) => App.toast(err.message, 'error'));
   if (v) { e.preventDefault(); openMember(Number(v.dataset.mview)); }
   if (pay) markPaid(memberData.members.find((m) => m.id === Number(pay.dataset.mpay)), pay.dataset.month).then(reload).catch((err) => App.toast(err.message, 'error'));
   if (s) logSongs(memberData.members.find((m) => m.id === Number(s.dataset.msongs)));
@@ -844,8 +851,9 @@ function logSongs(m, after) {
     App.toast(`${r.added} song${r.added === 1 ? '' : 's'} logged for ${m.name}`, 'ok');
     const done = () => { reload(); if (after) after(); };
     // The plan limit applies to the current month, so only prompt for songs logged in it.
-    if (r.member.month === memberData.month) setTimeout(() => promptUpgrade(r.member).catch((e) => App.toast(e.message, 'error')).finally(done), 50);
-    else done();
+    // Plans move up automatically when the month's songs pass the limit.
+    if (r.upgraded) App.toast(`⬆ ${m.name} passed the ${m.plan_name} limit and moved up to ${r.upgraded} automatically`, 'ok');
+    done();
   } });
 }
 

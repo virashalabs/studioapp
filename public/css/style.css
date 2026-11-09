@@ -790,3 +790,50 @@ a.slide { display: block; }
 }
 .pw-eye:hover, .pw-eye[aria-pressed="true"] { color: var(--accent); }
 .pw-eye:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ===== Weekly event page ===== */
+.ev-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+.ev-layout > div > .panel + .panel, .ev-layout aside .panel + .panel { margin-top: 18px; }
+.ev-step-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.ev-step-head h3 { margin: 0; }
+.ev-num { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: #ffd23f; color: #111; flex: none; }
+.ev-vote { display: flex; gap: 12px; flex-wrap: wrap; }
+.ev-vote .btn { flex: 1 1 160px; }
+.ev-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.ev-cols h4 { margin: 4px 0 10px; }
+.ev-song-row { display: grid; grid-template-columns: 1.2fr 1fr auto; gap: 6px; margin-bottom: 8px; }
+.ev-song-row input { min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; font: inherit; font-size: 14px; background: var(--card); color: var(--ink); }
+.ev-list { margin: 0; padding-left: 18px; }
+.ev-lineup { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ev-lineup li { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; border-left: 4px solid #ffd23f; }
+.ev-song { font-weight: 600; }
+.ev-who { color: var(--ink-2); }
+.ev-how { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--ink-2); font-size: 14px; }
+.ev-past { padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.ev-past:first-child { border-top: 0; padding-top: 0; }
+@media (max-width: 860px) {
+  .ev-layout { grid-template-columns: 1fr; }
+  .ev-cols { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .ev-song-row { grid-template-columns: 1fr auto; }
+  .ev-song-row input[data-k=album] { grid-column: 1; grid-row: 2; }
+  .ev-song-row button { grid-row: 1 / span 2; }
+}
+
+/* Member page: UPI payment and monthly report */
+.pay-box { display: grid; grid-template-columns: 150px 1fr; gap: 16px; margin-top: 14px; align-items: start; }
+.pay-qr { width: 100%; height: auto; border-radius: 10px; background: #fff; }
+.pay-box input { border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; font: inherit; background: var(--card); color: var(--ink); }
+@media (max-width: 480px) { .pay-box { grid-template-columns: 1fr; } .pay-qr { max-width: 240px; margin: 0 auto; } }
+.event-cta { display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; font-size: 15px; border-left: 4px solid #ffd23f; }
+.event-cta > span:first-child { flex: 1; }
+.event-cta:hover { box-shadow: var(--shadow-lg); }
+.month-report { margin: 4px 0 14px; }
+.report-weeks { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px; }
+.report-weeks > div { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+.report-weeks b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.report-weeks small { font-size: 11px; }
+.report-weeks .total { border-color: #c99b3f; background: rgba(201,155,63,.08); }
+.ev-step .pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+.ev-step .pill.pending { background: rgba(255, 193, 7, .16); color: #e0a800; }

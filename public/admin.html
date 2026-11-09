@@ -42,6 +42,7 @@
         <button data-view="dashboard" class="active">📊 Dashboard</button>
         <button data-view="bookings">📋 Bookings <span class="count" id="pendingCount"></span></button>
         <button data-view="calendar">📅 Calendar &amp; Free Dates</button>
+        <button data-view="events">🗓️ Weekly Events</button>
         <button data-view="members">🎤 Members <span class="count" id="memberAlertCount"></span></button>
         <button data-view="revenue">💰 Revenue</button>
         <button data-view="banners">🖼️ Banners</button>
@@ -175,11 +176,26 @@
           <div class="card"><div class="table-wrap" id="testiTable"></div></div>
         </section>
 
+        <!-- Weekly events -->
+        <section class="view" id="view-events">
+          <div class="card">
+            <div class="card-head"><h3>Weekly events</h3>
+              <div class="actions"><button class="btn btn-ghost btn-sm" id="deleteOld">🗑 Delete old weeks</button><button class="btn btn-primary btn-sm" id="newEvent">+ New event</button></div></div>
+            <p class="muted" style="margin-top:0;font-size:13px" id="eventsHelp"></p>
+            <div class="table-wrap" id="eventTable"></div>
+          </div>
+        </section>
+
         <!-- Members -->
         <section class="view" id="view-members">
           <div class="kpis" id="memberKpis"></div>
           <div class="card">
-            <div class="card-head"><h3>Singer members</h3><button class="btn btn-primary btn-sm" id="newMember">+ New member</button></div>
+            <div class="card-head"><h3>Singer members</h3>
+              <div class="actions">
+                <button class="btn btn-ghost btn-sm" data-xl="singers-template">⬇ Template</button>
+                <button class="btn btn-ghost btn-sm" data-xl="singers-upload">⬆ Upload Excel</button>
+                <button class="btn btn-ghost btn-sm" data-xl="singers-download">⬇ Download Excel</button>
+                <button class="btn btn-primary btn-sm" id="newMember">+ New member</button></div></div>
             <div class="toolbar">
               <input class="grow" type="search" id="mSearch" placeholder="Search name, member no. or phone">
               <select id="mGender"><option value="">All genders</option><option>Male</option><option>Female</option></select>
@@ -190,9 +206,18 @@
                 <option value="unpaid">Fee not paid</option>
                 <option value="overdue">Fee overdue</option>
                 <option value="expired">Expired</option>
+                <option value="new">New – to approve</option>
+                <option value="claims">UPI payment to confirm</option>
               </select>
             </div>
             <div class="table-wrap" id="memberTable"></div>
+          </div>
+          <div class="card" id="remindCard">
+            <div class="card-head"><h3>Reminders &amp; monthly reports (WhatsApp)</h3>
+              <div class="actions"><select id="rMonth" aria-label="Month"></select>
+                <div class="seg" id="rKind" style="min-width:240px"><label><input type="radio" name="rk" value="fee" checked> Fee reminders</label><label><input type="radio" name="rk" value="report"> Monthly reports</label></div></div></div>
+            <p class="muted" style="margin-top:0;font-size:13px" id="rHelp"></p>
+            <div class="table-wrap" id="remindTable"></div>
           </div>
           <form class="card" id="plansForm">
             <div class="card-head"><h3>Membership plans &amp; pricing</h3></div>
@@ -220,6 +245,8 @@
                   <div class="field full"><label>Google Maps link</label><input name="map_link"></div>
                   <div class="field"><label>Instagram URL</label><input name="instagram"></div>
                   <div class="field"><label>YouTube URL</label><input name="youtube"></div>
+                  <div class="field"><label>UPI ID (membership fees)</label><input name="upi_id" placeholder="9962258845@okbizaxis"></div>
+                  <div class="field"><label>UPI payee name</label><input name="upi_name" placeholder="Rhythm Rehearsal Studio"></div>
                 </div>
               </div>
               <div class="card">
@@ -275,6 +302,8 @@
 
   <script src="js/common.js"></script>
   <script src="js/member-card.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="js/admin.js"></script>
+  <script src="js/admin-events.js"></script>
 </body>
 </html>

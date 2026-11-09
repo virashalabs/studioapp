@@ -122,6 +122,69 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 `);
 
+// Weekly singing events: voting, song choices, pairing (line-up) and the week's video link.
+db.exec(`
+CREATE TABLE IF NOT EXISTS events (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  title        TEXT NOT NULL,
+  event_date   TEXT NOT NULL,                      -- YYYY-MM-DD
+  event_time   TEXT,
+  venue        TEXT,
+  notes        TEXT,
+  voting_open  INTEGER NOT NULL DEFAULT 1,
+  songs_open   INTEGER NOT NULL DEFAULT 0,
+  published    INTEGER NOT NULL DEFAULT 0,         -- line-up visible to singers
+  done         INTEGER NOT NULL DEFAULT 0,         -- songs added to the singers' monthly counts
+  video_link   TEXT,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS event_votes (
+  event_id   INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  member_id  INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  going      INTEGER NOT NULL,
+  voted_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (event_id, member_id)
+);
+-- Songs a singer would like to sing that week (solo or duet).
+CREATE TABLE IF NOT EXISTS event_choices (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id   INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  member_id  INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  kind       TEXT NOT NULL CHECK (kind IN ('solo','duet')),
+  title      TEXT NOT NULL,
+  album      TEXT,
+  sort       INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_event_choices ON event_choices(event_id, member_id);
+-- Line-up made by the admin: a duet (male + female) or a solo (female_id NULL / male_id NULL).
+CREATE TABLE IF NOT EXISTS event_pairs (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id   INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  male_id    INTEGER REFERENCES members(id) ON DELETE CASCADE,
+  female_id  INTEGER REFERENCES members(id) ON DELETE CASCADE,
+  title      TEXT NOT NULL,
+  album      TEXT,
+  sort       INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_event_pairs ON event_pairs(event_id);
+-- "I've paid" messages from singers (UPI reference), confirmed by the admin.
+CREATE TABLE IF NOT EXISTS payment_claims (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  member_id  INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  month      TEXT NOT NULL,
+  amount     REAL NOT NULL,
+  ref        TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (member_id, month)
+);
+`);
+const memberCols = db.prepare('PRAGMA table_info(members)').all().map((c) => c.name);
+// Singers who joined through an event vote link wait for the admin's approval.
+if (!memberCols.includes('approved')) db.exec('ALTER TABLE members ADD COLUMN approved INTEGER NOT NULL DEFAULT 1');
+const songCols = db.prepare('PRAGMA table_info(member_songs)').all().map((c) => c.name);
+// Songs added automatically from a weekly event (so finishing it again replaces them).
+if (!songCols.includes('event_id')) db.exec('ALTER TABLE member_songs ADD COLUMN event_id INTEGER');
+
 // Migrations for databases created before a column existed.
 const galleryCols = db.prepare('PRAGMA table_info(gallery)').all().map((c) => c.name);
 if (!galleryCols.includes('category')) db.exec("ALTER TABLE gallery ADD COLUMN category TEXT NOT NULL DEFAULT 'Live Room'");
@@ -198,7 +261,11 @@ const DEFAULT_SETTINGS = {
     { key: 'f_premium', gender: 'Female', name: 'Premium', limit: 50, price: 3000 },
     { key: 'f_elite', gender: 'Female', name: 'Elite', limit: 100, price: 4000 },
   ]),
-  membership_due_day: '10', // monthly fee must be paid by this day of the month
+  membership_due_day: '10',
+  // UPI payment details shown to singers (QR image in public/img/upi-qr.png).
+  upi_id: '9962258845@okbizaxis',
+  upi_name: 'Rhythm Rehearsal Studio',
+  events_keep_weeks: '13', // weekly events older than this are offered for deletion // monthly fee must be paid by this day of the month
   instagram: 'https://instagram.com',
   youtube: 'https://youtube.com',
 };

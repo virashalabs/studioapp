@@ -97,6 +97,8 @@ function summary(m, allPlans = getPlans(), ym = thisMonth()) {
   const { pin_hash, ...pub } = m;
   const feeList = fees(m, tier);
   const unpaid = feeList.filter((f) => f.status !== 'paid');
+  const claims = db.prepare('SELECT month, amount, ref, created_at FROM payment_claims WHERE member_id = ? ORDER BY month DESC').all(m.id)
+    .filter((c) => feeList.some((f) => f.month === c.month && f.status !== 'paid'));
   return {
     ...pub,
     plan_name: tier.name,
@@ -116,6 +118,8 @@ function summary(m, allPlans = getPlans(), ym = thisMonth()) {
     fee_due: unpaid.reduce((a, f) => a + f.balance, 0),
     fee_overdue: unpaid.filter((f) => f.status === 'overdue').map((f) => f.month),
     due_day: dueDay(),
+    approved: m.approved !== 0,
+    claims,                          // "I've paid" messages waiting for the admin to confirm
   };
 }
 
@@ -140,6 +144,28 @@ function nextMemberNo() {
 }
 
 const getMember = (id) => db.prepare('SELECT * FROM members WHERE id = ?').get(id);
+// Phone numbers are matched on their last 10 digits ("+91 98400 11223" = "9840011223").
+const phoneKey = (p) => String(p || '').replace(/\D/g, '').slice(-10);
+function memberByPhone(phone) {
+  const k = phoneKey(phone);
+  if (k.length < 10) return null;
+  return db.prepare('SELECT * FROM members').all().find((m) => phoneKey(m.phone) === k) || null;
+}
+
+// Plan goes up automatically when this month's songs pass the limit (the price difference shows as a fee balance).
+function autoUpgrade(memberId, notify) {
+  const m = getMember(memberId);
+  if (!m) return null;
+  const plans = plansFor(m.gender);
+  const tier = plans.find((p) => p.key === m.plan) || plans[0];
+  const count = monthCount(m.id);
+  if (!tier || tier.limit == null || count <= tier.limit) return null;
+  const target = planCovering(plans, count);
+  if (!target || plans.indexOf(target) <= plans.indexOf(tier)) return null;
+  db.prepare('UPDATE members SET plan = ?, upgrade_request = NULL WHERE id = ?').run(target.key, m.id);
+  if (notify) notify('membership', `${m.member_no} ${m.name} moved up to ${target.name} automatically (${count} songs this month)`);
+  return target;
+}
 
 module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePath }) {
   const fail = (res, status, error) => res.status(status).json({ error });
@@ -155,6 +181,10 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
     if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
     return getMember(id) || null;
   }
+  function setMemberCookie(res, id) {
+    const exp = Date.now() + 1000 * 60 * 60 * 24 * 30;
+    res.setHeader('Set-Cookie', `${COOKIE}=${id}.${exp}.${sign(`member:${id}.${exp}`)}; HttpOnly; SameSite=Lax; Path=${cookiePath}; Max-Age=${60 * 60 * 24 * 30}`);
+  }
   function requireMember(req, res, next) {
     const m = memberFromReq(req);
     if (!m) return fail(res, 401, 'Please log in with your member number.');
@@ -166,11 +196,12 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
   app.get('/api/membership/plans', (req, res) => res.json({ plans: getPlans(), currency: getSettings().currency || '₹', due_day: dueDay() }));
 
   app.post('/api/member/login', (req, res) => {
-    const no = clean(req.body.member_no, 12).toUpperCase().replace(/\s+/g, '');
-    const m = db.prepare('SELECT * FROM members WHERE member_no = ?').get(no);
-    if (!m || !verifyPassword(String(req.body.pin || ''), m.pin_hash)) return fail(res, 401, 'Member number or PIN is incorrect.');
-    const exp = Date.now() + 1000 * 60 * 60 * 24 * 7;
-    res.setHeader('Set-Cookie', `${COOKIE}=${m.id}.${exp}.${sign(`member:${m.id}.${exp}`)}; HttpOnly; SameSite=Lax; Path=${cookiePath}; Max-Age=${60 * 60 * 24 * 7}`);
+    // Log in with the member number (RRS1001) or the phone number.
+    const id = clean(req.body.member_no, 20);
+    const no = id.toUpperCase().replace(/\s+/g, '');
+    const m = db.prepare('SELECT * FROM members WHERE member_no = ?').get(no) || (/^RRS/.test(no) ? null : memberByPhone(id));
+    if (!m || !verifyPassword(String(req.body.pin || ''), m.pin_hash)) return fail(res, 401, 'Member number / phone or PIN is incorrect.');
+    setMemberCookie(res, m.id);
     res.json({ ok: true });
   });
   app.post('/api/member/logout', (req, res) => {
@@ -271,6 +302,7 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
     db.prepare(`INSERT INTO member_payments (member_id, month, plan, amount, paid_on) VALUES (?,?,?,?,?)
       ON CONFLICT(member_id, month) DO UPDATE SET plan = excluded.plan, amount = excluded.amount, paid_on = excluded.paid_on`)
       .run(m.id, ym, m.plan, priceOf(tier), today());
+    db.prepare('DELETE FROM payment_claims WHERE member_id = ? AND month = ?').run(m.id, ym);
     refreshValidity(m);
     res.json({ ok: true, member: summary(getMember(m.id)) });
   });
@@ -299,12 +331,95 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
     if (!songs.length) return fail(res, 400, 'Add at least one song.');
     const ins = db.prepare('INSERT INTO member_songs (member_id, sung_on, title, album) VALUES (?,?,?,?)');
     for (const s of songs) ins.run(m.id, date, s.title, s.album);
-    res.json({ ok: true, added: songs.length, member: summary(getMember(m.id), getPlans(), date.slice(0, 7)) });
+    const upgraded = date.slice(0, 7) === thisMonth() ? autoUpgrade(m.id, notify) : null;
+    res.json({ ok: true, added: songs.length, upgraded: upgraded && upgraded.name, member: summary(getMember(m.id), getPlans(), date.slice(0, 7)) });
   });
 
   app.delete('/api/admin/members/:id/songs/:songId', (req, res) => {
     db.prepare('DELETE FROM member_songs WHERE id = ? AND member_id = ?').run(req.params.songId, req.params.id);
     res.json({ ok: true });
+  });
+
+  // ----- singer: "I've paid" with the UPI transaction reference -----
+  app.post('/api/member/payment-claim', requireMember, (req, res) => {
+    const m = req.member, s = summary(m);
+    const ym = MONTH_RE.test(req.body.month || '') ? req.body.month : s.fee.month;
+    const fee = s.fees.find((f) => f.month === ym);
+    if (!fee || fee.status === 'paid') return fail(res, 400, 'This month is already paid.');
+    const ref = clean(req.body.ref, 40);
+    if (!/^[A-Za-z0-9]{6,40}$/.test(ref)) return fail(res, 400, 'Please enter the UPI transaction ID (UTR) shown in your payment app.');
+    db.prepare(`INSERT INTO payment_claims (member_id, month, amount, ref) VALUES (?,?,?,?)
+      ON CONFLICT(member_id, month) DO UPDATE SET amount = excluded.amount, ref = excluded.ref, created_at = datetime('now')`).run(m.id, ym, fee.balance, ref);
+    notify('membership', `${m.member_no} ${m.name} paid ${fee.balance} for ${ym} by UPI (ref ${ref}) - please confirm`);
+    res.json({ ok: true });
+  });
+  app.delete('/api/admin/members/:id/claims/:month', (req, res) => {
+    db.prepare('DELETE FROM payment_claims WHERE member_id = ? AND month = ?').run(req.params.id, req.params.month);
+    res.json({ ok: true });
+  });
+  app.post('/api/admin/members/:id/approve', (req, res) => {
+    db.prepare('UPDATE members SET approved = 1 WHERE id = ?').run(req.params.id);
+    res.json({ ok: true });
+  });
+
+  // ----- Excel import of singers: rows of { name, phone, gender, plan, email, member_no } -----
+  // Matches existing singers by member number, then phone; others are created (PIN = last 4 digits of phone).
+  app.post('/api/admin/members/import', (req, res) => {
+    const rows = Array.isArray(req.body.rows) ? req.body.rows.slice(0, 2000) : [];
+    const dry = !!req.body.dry_run, all = getPlans();
+    const out = { created: 0, updated: 0, errors: [] };
+    const planFor = (gender, name) => {
+      const list = plansFor(gender, all);
+      if (!name) return list[0];
+      const n = String(name).trim().toLowerCase();
+      return list.find((p) => p.name.toLowerCase() === n || p.key === n) || null;
+    };
+    db.exec('BEGIN');
+    try {
+      const seen = new Set();
+      rows.forEach((r, i) => {
+        const line = i + 2; // header is row 1 in the sheet
+        const name = clean(r.name, 80), phone = clean(r.phone, 20);
+        const gender = /^f/i.test(r.gender || '') ? 'Female' : /^m/i.test(r.gender || '') ? 'Male' : null;
+        if (!name || phoneKey(phone).length < 10) return out.errors.push(`Row ${line}: name and a 10-digit phone number are needed.`);
+        if (!gender) return out.errors.push(`Row ${line} (${name}): gender must be Male or Female.`);
+        if (seen.has(phoneKey(phone))) return out.errors.push(`Row ${line} (${name}): phone number repeated in the sheet.`);
+        seen.add(phoneKey(phone));
+        const tier = planFor(gender, r.plan);
+        if (!tier) return out.errors.push(`Row ${line} (${name}): unknown ${gender.toLowerCase()} plan "${r.plan}".`);
+        const no = clean(r.member_no, 12).toUpperCase();
+        const existing = (no && db.prepare('SELECT * FROM members WHERE member_no = ?').get(no)) || memberByPhone(phone);
+        const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email || '') ? clean(r.email, 120) : null;
+        if (existing) {
+          const plan = existing.gender === gender && !r.plan ? existing.plan : tier.key;
+          db.prepare('UPDATE members SET name=?, phone=?, gender=?, plan=?, email=COALESCE(?, email), approved=1 WHERE id=?')
+            .run(name, phone, gender, plan, email, existing.id);
+          out.updated++;
+        } else {
+          const start = today();
+          db.prepare(`INSERT INTO members (member_no, name, gender, phone, email, plan, start_date, valid_until, pin_hash)
+            VALUES (?,?,?,?,?,?,?,?,?)`).run(nextMemberNo(), name, gender, phone, email, tier.key, start, monthEndOf(start.slice(0, 7)), hashPassword(phoneKey(phone).slice(-4)));
+          out.created++;
+        }
+      });
+      db.exec(dry ? 'ROLLBACK' : 'COMMIT');
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+    res.json({ ok: true, dry_run: dry, ...out });
+  });
+
+  // ----- monthly report per singer (songs per week, song list, plan) and fee reminders -----
+  app.get('/api/admin/reports', (req, res) => {
+    const ym = MONTH_RE.test(req.query.month || '') ? req.query.month : thisMonth();
+    const all = getPlans(), st = getSettings();
+    const list = db.prepare('SELECT * FROM members WHERE approved = 1 ORDER BY name').all().map((m) => {
+      const songs = db.prepare('SELECT sung_on, title, album FROM member_songs WHERE member_id = ? AND substr(sung_on,1,7) = ? ORDER BY sung_on, id').all(m.id, ym);
+      const weeks = [0, 0, 0, 0, 0];
+      for (const x of songs) weeks[Math.min(4, Math.floor((Number(x.sung_on.slice(8)) - 1) / 7))]++;
+      const s = summary(m, all, ym);
+      return { id: m.id, member_no: m.member_no, name: m.name, phone: m.phone, gender: m.gender, plan_name: s.plan_name,
+        plan_limit: s.plan_limit, plan_price: s.plan_price, count: songs.length, weeks, songs, fee: s.fee, fee_due: s.fee_due };
+    });
+    res.json({ month: ym, members: list, due_day: dueDay(), currency: st.currency || '₹', upi_id: st.upi_id || '' });
   });
 
   app.put('/api/admin/membership-plans', (req, res) => {
@@ -334,9 +449,29 @@ module.exports = function mountMembers(app, { sign, readCookie, notify, cookiePa
     res.json({ ok: true, plans: next });
   });
 
+  // Fee notices in the admin bell: a reminder a few days before the due day, and the overdue list on the day.
+  function feeNotices() {
+    const day = Number(today().slice(8)), due = dueDay(), ym = thisMonth(), s = getSettings();
+    const all = getPlans();
+    const pending = db.prepare('SELECT * FROM members WHERE approved = 1').all().map((m) => summary(m, all)).filter((m) => m.fee.status !== 'paid');
+    if (!pending.length) return;
+    if (day >= due - 3 && day < due && s.fee_notice_due !== ym) {
+      setSetting('fee_notice_due', ym);
+      notify('membership', `${pending.length} singer(s) haven't paid the ${ym} fee yet - due before the ${due}th. Send reminders from Members > Reminders.`);
+    }
+    if (day >= due && s.fee_notice_overdue !== ym) {
+      setSetting('fee_notice_overdue', ym);
+      notify('membership', `${pending.length} singer(s) are overdue for ${ym}: ${pending.slice(0, 6).map((m) => m.name).join(', ')}${pending.length > 6 ? '...' : ''}`);
+    }
+  }
+  feeNotices();
+  setInterval(feeNotices, 60 * 60 * 1000).unref();
+
   // Errors thrown with a status (validation) become JSON 4xx responses.
   app.use(['/api/admin/members', '/api/admin/membership-plans', '/api/member'], (err, req, res, next) => {
     if (err.status) return fail(res, err.status, err.message);
     next(err);
   });
+
+  return { memberFromReq, requireMember, setMemberCookie, autoUpgrade: (id) => autoUpgrade(id, notify), plansFor, memberByPhone, phoneKey, nextMemberNo, monthEndOf, getMember };
 };
