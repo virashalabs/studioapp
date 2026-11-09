@@ -1,6 +1,6 @@
-# Render Blueprint: free web service for the demo.
-# Note: the free plan's disk is wiped on every deploy/restart, so the site resets
-# to the demo content in seed/studio.db (bookings made on the live site are lost).
+# Render Blueprint: free web service.
+# The free plan's disk is wiped on every deploy/restart, so the database and uploaded images are
+# mirrored to a private Supabase Storage bucket (see persist.js) and restored on start.
 services:
   - type: web
     name: studio-booking
@@ -29,6 +29,14 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
+      # Supabase project URL (https://xxxx.supabase.co) and its service_role key (Project Settings -> API).
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      # Private Storage bucket that holds db/, uploads/ and backups/
+      - key: SUPABASE_BUCKET
+        value: studio
       # Main domain, e.g. rhythmrehearsalstudio.online. Set it only once that domain works over HTTPS.
       - key: CANONICAL_HOST
         sync: false

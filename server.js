@@ -7,6 +7,7 @@ const express = require('express');
 const { db, getSettings, setSetting, hashPassword, verifyPassword } = require('./db');
 const { sendMail, bookingTable, esc } = require('./mailer');
 const mountMembers = require('./members');
+const persist = require('./persist');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -398,11 +399,12 @@ app.post('/api/admin/upload', (req, res) => {
   if (buf.length > 6 * 1024 * 1024) return res.status(400).json({ error: 'Image must be under 6 MB.' });
   const file = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${m[1] === 'jpeg' ? 'jpg' : m[1]}`;
   fs.writeFileSync(path.join(UPLOAD_DIR, file), buf);
+  persist.putFile('uploads/' + file, buf);
   // Optional small copy for grids/tiles, generated in the browser; served from uploads/thumbs/.
   const t = /^data:image\/(png|jpe?g|webp);base64,([A-Za-z0-9+/=]+)$/.exec(String(req.body.thumbDataUrl || ''));
   if (t) {
     const tbuf = Buffer.from(t[2], 'base64');
-    if (tbuf.length <= 1024 * 1024) fs.writeFileSync(path.join(THUMB_DIR, file), tbuf);
+    if (tbuf.length <= 1024 * 1024) { fs.writeFileSync(path.join(THUMB_DIR, file), tbuf); persist.putFile('uploads/thumbs/' + file, tbuf); }
   }
   res.json({ url: 'uploads/' + file });
 });
@@ -411,6 +413,8 @@ function removeUpload(url) {
   if (url && /^\/?uploads\//.test(url)) {
     fs.rm(path.join(UPLOAD_DIR, path.basename(url)), { force: true }, () => {});
     fs.rm(path.join(THUMB_DIR, path.basename(url)), { force: true }, () => {});
+    persist.removeFile('uploads/' + path.basename(url));
+    persist.removeFile('uploads/thumbs/' + path.basename(url));
   }
 }
 

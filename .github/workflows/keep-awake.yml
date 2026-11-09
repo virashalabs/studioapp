@@ -14,5 +14,5 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: Ping studio.virashalabs.online
-        run: curl -fsS -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" --max-time 90 --retry 2 https://studio.virashalabs.online/
+      - name: Ping rhythmrehearsalstudio.online
+        run: curl -fsS -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" --max-time 90 --retry 2 https://rhythmrehearsalstudio.online/
