@@ -99,3 +99,32 @@ a.app-pill { width: 100%; justify-content: space-between; }
 
 /* Website pages shown inside the app */
 body.embedded #site-header, body.embedded #site-footer { display: none; }
+
+/* Dashboard v2 */
+.app-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.app-stats div { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, var(--card)), var(--card)); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; }
+.app-stats small { color: var(--ink-2); }
+.app-stats b { font-size: 38px; line-height: 1.1; }
+.app-stats span { color: var(--muted); font-size: 13px; }
+.app-weeks div.now { outline: 2px solid var(--accent); }
+.app-plan-now b { display: block; font-size: 20px; }
+.app-plan-now span { color: var(--muted); font-size: 14px; }
+.app-promo { border-color: color-mix(in srgb, var(--amber) 45%, var(--line)); background: linear-gradient(160deg, color-mix(in srgb, var(--amber) 12%, var(--card)), var(--card)); }
+.app-ladder { list-style: none; margin: 8px 0 0; padding: 0; }
+.app-ladder li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.app-ladder li:first-child { border-top: 0; }
+.app-ladder li > div { flex: 1; }
+.app-ladder small { color: var(--muted); }
+.app-benefit { display: block; color: var(--amber); font-size: 13px; font-weight: 500; margin-top: 2px; }
+.app-top-plan { padding: 4px 0; }
+.app-note { background: var(--surface-2, var(--bg)); border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; font-size: 14px; }
+.app-sub { margin: 12px 0 0; font-size: 14px; color: var(--ink-2); }
+.app-plans b small { font-size: 12px; color: var(--muted); font-weight: 400; }
+.app-howpay { list-style: none; margin: 0; padding: 0; }
+.app-howpay li { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.app-howpay li:first-child { border-top: 0; }
+.app-howpay li > span { font-size: 26px; }
+.app-howpay b, .app-howpay small { display: block; }
+.app-howpay small { color: var(--muted); }
+.app-howpay summary { cursor: pointer; color: var(--accent); margin-top: 6px; }
+.app-howpay .pay-qr { max-width: 220px; margin-top: 8px; border-radius: 12px; }
