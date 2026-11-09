@@ -594,6 +594,53 @@ app.post('/api/admin/super-password', (req, res) => {
   res.json({ ok: true });
 });
 
+// Superadmin only: wipe demo / test data before handing over. Each part is optional.
+// Demo singers = the sample members (RRS1001–RRS1006 with @example.com emails).
+const DEMO_SINGERS = "SELECT id FROM members WHERE email LIKE '%@example.com'";
+function memberIdsFor(which) {
+  return db.prepare(which === 'all' ? 'SELECT id FROM members' : DEMO_SINGERS).all().map((r) => r.id);
+}
+app.get('/api/admin/clear-data', (req, res) => {
+  if (!isSuper(req)) return res.status(403).json({ error: 'Only the superadmin can do this.' });
+  const n = (sql) => db.prepare(sql).get().n;
+  res.json({
+    demo_singers: memberIdsFor('demo').length,
+    all_singers: n('SELECT COUNT(*) n FROM members'),
+    bookings: n('SELECT COUNT(*) n FROM bookings'),
+    events: n('SELECT COUNT(*) n FROM events'),
+    reviews: n('SELECT COUNT(*) n FROM testimonials'),
+    notifications: n('SELECT COUNT(*) n FROM notifications'),
+  });
+});
+app.post('/api/admin/clear-data', (req, res) => {
+  if (!isSuper(req)) return res.status(403).json({ error: 'Only the superadmin can do this.' });
+  if (req.body.confirm !== 'DELETE') return res.status(400).json({ error: 'Type DELETE to confirm.' });
+  const b = req.body, done = {};
+  db.exec('BEGIN');
+  try {
+    if (b.singers === 'demo' || b.singers === 'all') {
+      const ids = memberIdsFor(b.singers);
+      for (const id of ids) {
+        for (const t of ['member_songs', 'member_payments', 'payment_claims', 'event_votes', 'event_choices']) db.prepare(`DELETE FROM ${t} WHERE member_id = ?`).run(id);
+        db.prepare('DELETE FROM event_pairs WHERE male_id = ? OR female_id = ?').run(id, id);
+        db.prepare('DELETE FROM members WHERE id = ?').run(id);
+      }
+      done.singers = ids.length;
+    }
+    if (b.events) {
+      for (const t of ['event_pairs', 'event_choices', 'event_votes']) db.prepare(`DELETE FROM ${t}`).run();
+      db.prepare('UPDATE member_songs SET event_id = NULL WHERE event_id IS NOT NULL').run();
+      done.events = db.prepare('DELETE FROM events').run().changes;
+    }
+    if (b.bookings) done.bookings = db.prepare('DELETE FROM bookings').run().changes;
+    if (b.reviews) done.reviews = db.prepare('DELETE FROM testimonials').run().changes;
+    if (b.notifications) done.notifications = db.prepare('DELETE FROM notifications').run().changes;
+    setSetting('demo_cleared', '1'); // stop the demo content from being added back on restart
+    db.exec('COMMIT');
+  } catch (err) { db.exec('ROLLBACK'); throw err; }
+  res.json({ ok: true, done });
+});
+
 // ---------- membership (singer login + admin member management) ----------
 const members = mountMembers(app, { sign, readCookie, notify, cookiePath: COOKIE_PATH });
 mountEvents(app, { notify, members });

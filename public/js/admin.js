@@ -53,6 +53,7 @@ async function boot() {
   state.demo = demo;
   // Superadmin: everything the admin has, plus the password panel in Settings.
   $('superCard').classList.toggle('hidden', !sup);
+  if (sup) loadClearOpts();
   $('superBadge').classList.toggle('hidden', !sup);
   $('demoNote').classList.toggle('hidden', !demo);
   $('pwField').classList.toggle('hidden', demo);
@@ -752,6 +753,37 @@ $('superPwForm').addEventListener('submit', async (e) => {
     e.target.reset();
     App.toast('Superadmin password changed', 'ok');
   } catch (err) { App.toast(err.message, 'error'); }
+});
+
+async function loadClearOpts() {
+  try {
+    const c = await App.api('api/admin/clear-data');
+    const opt = (name, value, label, checked, type = 'checkbox') => `<label style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:14px"><input type="${type}" name="${name}" value="${value}" ${checked ? 'checked' : ''}> ${label}</label>`;
+    $('clearOpts').innerHTML = `
+      <div style="font-weight:600;font-size:13px;margin:4px 0">Singers</div>
+      ${opt('singers', 'demo', `Demo singers only (Ram, Priya, Karthik, Meena, Arun, Divya) – <b>${c.demo_singers}</b>`, true, 'radio')}
+      ${opt('singers', 'all', `<span style="color:var(--red)">All singers</span>, including ones added while testing – <b>${c.all_singers}</b>`, false, 'radio')}
+      ${opt('singers', 'none', 'Keep all singers', false, 'radio')}
+      <div style="font-weight:600;font-size:13px;margin:10px 0 4px">Other test data</div>
+      ${opt('events', '1', `Weekly events, votes and line-ups – <b>${c.events}</b>`, true)}
+      ${opt('bookings', '1', `Studio bookings – <b>${c.bookings}</b>`, true)}
+      ${opt('reviews', '1', `Reviews / testimonials (the sample ones) – <b>${c.reviews}</b>`, true)}
+      ${opt('notifications', '1', `Bell notifications – <b>${c.notifications}</b>`, true)}`;
+  } catch { /* not superadmin */ }
+}
+$('clearForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = Object.fromEntries(new FormData(e.target));
+  if (f.confirm !== 'DELETE') return App.toast('Type DELETE (in capitals) to confirm', 'error');
+  if (!confirm('Delete the selected data permanently?')) return undefined;
+  try {
+    const r = await App.api('api/admin/clear-data', { method: 'POST', body: { confirm: 'DELETE', singers: f.singers, events: !!f.events, bookings: !!f.bookings, reviews: !!f.reviews, notifications: !!f.notifications } });
+    const d = r.done;
+    App.toast(`Cleared: ${[d.singers != null && `${d.singers} singers`, d.events != null && `${d.events} events`, d.bookings != null && `${d.bookings} bookings`, d.reviews != null && `${d.reviews} reviews`].filter(Boolean).join(', ') || 'nothing'}`, 'ok');
+    e.target.reset();
+    loadClearOpts();
+  } catch (err) { App.toast(err.message, 'error'); }
+  return undefined;
 });
 
 // ---------- members & songs ----------

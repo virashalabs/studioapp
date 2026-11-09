@@ -316,14 +316,16 @@ function seed() {
     ].forEach(([img, cap, cat], i) => ins.run(img, cap, cat, i));
   }
 
-  if (db.prepare('SELECT COUNT(*) AS n FROM testimonials').get().n === 0) {
+  // After the superadmin clears the demo data, never add sample reviews or demo singers again.
+  const cleared = db.prepare("SELECT value FROM settings WHERE key = 'demo_cleared'").get();
+  if (!cleared && db.prepare('SELECT COUNT(*) AS n FROM testimonials').get().n === 0) {
     const ins = db.prepare('INSERT INTO testimonials (name, band, message, rating, approved) VALUES (?,?,?,?,1)');
     ins.run('Arjun Menon', 'The Backbenchers', 'Best-sounding room in the city. The drum kit is always tuned and the AC actually works! We rehearse here every week.', 5);
     ins.run('Priya Sharma', 'Harmony Choir', 'We booked a full day for our concert prep – spacious, clean and the staff helped us set up the mics. Booking online took a minute.', 5);
     ins.run('Rohit & Friends', 'Birthday Jam', 'Celebrated my birthday with a jam session here. Mood lighting, great sound and zero hassle. Highly recommend!', 4);
   }
 
-  if (db.prepare('SELECT COUNT(*) AS n FROM members').get().n === 0) seedMembers();
+  if (!cleared && db.prepare('SELECT COUNT(*) AS n FROM members').get().n === 0) seedMembers();
 }
 
 // Demo singers, created on every fresh start with songs dated around today so "this month" always has data.
