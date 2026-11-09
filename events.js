@@ -32,12 +32,12 @@ function lineup(eventId, memberId = null) {
 function eventView(e, me) {
   const going = db.prepare('SELECT COUNT(*) n FROM event_votes WHERE event_id = ? AND going = 1').get(e.id).n;
   const view = { id: e.id, title: e.title, event_date: e.event_date, event_time: e.event_time, venue: e.venue, notes: e.notes,
-    voting_open: !!e.voting_open, songs_open: !!e.songs_open, published: !!e.published, done: !!e.done, going_count: going,
+    open: !!e.voting_open && !e.done, voting_open: !!e.voting_open && !e.done, published: !!e.published, done: !!e.done, going_count: going,
     video_link: null, me: null };
   if (me) {
-    const v = db.prepare('SELECT going FROM event_votes WHERE event_id = ? AND member_id = ?').get(e.id, me.id);
+    const v = db.prepare('SELECT going, admin_out, note FROM event_votes WHERE event_id = ? AND member_id = ?').get(e.id, me.id);
     const vote = v ? (v.going ? 'yes' : 'no') : null;
-    view.me = { member: memberLite(me), vote, choices: choicesOf(e.id, me.id), lineup: e.published && vote === 'yes' ? lineup(e.id, me.id) : [] };
+    view.me = { member: memberLite(me), vote, removed: !!(v && v.admin_out), note: v && v.admin_out ? v.note : null, choices: choicesOf(e.id, me.id), lineup: e.published && vote === 'yes' ? lineup(e.id, me.id) : [] };
     // The week's video goes to the singers who took part.
     if (vote === 'yes') view.video_link = e.video_link || null;
   }
@@ -71,7 +71,7 @@ module.exports = function mountEvents(app, { notify, members }) {
   app.post('/api/events/:id/vote', (req, res) => {
     const e = getEvent(req.params.id);
     if (!e) return fail(res, 404, 'Event not found.');
-    if (!e.voting_open) return fail(res, 400, 'Voting for this event is closed.');
+    if (!e.voting_open || e.done) return fail(res, 400, 'This event is closed.');
     const going = req.body.going ? 1 : 0;
     let m = memberFromReq(req), newPin = null;
     if (!m) {
@@ -90,20 +90,28 @@ module.exports = function mountEvents(app, { notify, members }) {
         if (!plan) return fail(res, 500, 'No membership plans are set up.');
         newPin = phoneKey(phone).slice(-4);
         const start = today();
-        const id = db.prepare(`INSERT INTO members (member_no, name, gender, phone, plan, start_date, valid_until, pin_hash, approved)
-          VALUES (?,?,?,?,?,?,?,?,0)`).run(nextMemberNo(), name, gender, phone, plan.key, start, monthEndOf(start.slice(0, 7)), hashPassword(newPin)).lastInsertRowid;
+        const id = db.prepare(`INSERT INTO members (member_no, name, gender, phone, plan, start_date, valid_until, pin_hash)
+          VALUES (?,?,?,?,?,?,?,?)`).run(nextMemberNo(), name, gender, phone, plan.key, start, monthEndOf(start.slice(0, 7)), hashPassword(newPin)).lastInsertRowid;
         m = db.prepare('SELECT * FROM members WHERE id = ?').get(id);
-        notify('membership', `New singer ${m.name} (${m.phone}) joined through the "${e.title}" vote – please approve in Members`);
+        notify('membership', `New singer ${m.name} (${m.member_no}, ${m.phone}) joined through "${e.title}"`);
       }
       setMemberCookie(res, m.id);
     }
+    const prev = db.prepare('SELECT admin_out, note FROM event_votes WHERE event_id = ? AND member_id = ?').get(e.id, m.id);
+    if (going && prev && prev.admin_out) {
+      return res.status(400).json({ error: `The studio has taken you off this week${prev.note ? `: ${prev.note.replace(/[.!?]*$/, '.')}` : '.'} Please contact the studio for any questions.`, event: eventView(e, m) });
+    }
     db.prepare(`INSERT INTO event_votes (event_id, member_id, going) VALUES (?,?,?)
       ON CONFLICT(event_id, member_id) DO UPDATE SET going = excluded.going, voted_at = datetime('now')`).run(e.id, m.id, going);
-    res.json({ ok: true, member_no: m.member_no, new_pin: newPin, event: eventView(e, m) });
+    // "I'm in" and the song list are sent together from the event page.
+    let saved = null;
+    if (going && (Array.isArray(req.body.solo) || Array.isArray(req.body.duet))) saved = saveChoices(e.id, m.id, req.body);
+    if (!going) db.prepare('DELETE FROM event_choices WHERE event_id = ? AND member_id = ?').run(e.id, m.id);
+    res.json({ ok: true, member_no: m.member_no, new_pin: newPin, saved, event: eventView(e, m) });
   });
 
   // Song choices (solo and duet lists) from a singer who is going.
-  const saveChoices = (eventId, memberId, body) => {
+  function saveChoices(eventId, memberId, body) {
     const norm = (list) => (Array.isArray(list) ? list : []).map((s) => ({ title: clean(s && s.title, 120), album: clean(s && s.album, 120) || null }))
       .filter((s) => s.title).slice(0, 30);
     const solo = norm(body.solo), duet = norm(body.duet);
@@ -112,11 +120,11 @@ module.exports = function mountEvents(app, { notify, members }) {
     solo.forEach((s, i) => ins.run(eventId, memberId, 'solo', s.title, s.album, i));
     duet.forEach((s, i) => ins.run(eventId, memberId, 'duet', s.title, s.album, i));
     return { solo: solo.length, duet: duet.length };
-  };
+  }
   app.put('/api/events/:id/songs', requireMember, (req, res) => {
     const e = getEvent(req.params.id);
     if (!e) return fail(res, 404, 'Event not found.');
-    if (!e.songs_open) return fail(res, 400, 'Song choices for this event are not open.');
+    if (!e.voting_open || e.done) return fail(res, 400, 'This event is closed.');
     const v = db.prepare('SELECT going FROM event_votes WHERE event_id = ? AND member_id = ?').get(e.id, req.member.id);
     if (!v || !v.going) return fail(res, 400, 'Vote "I\'m in" first to send your songs.');
     const n = saveChoices(e.id, req.member.id, req.body);
@@ -179,14 +187,14 @@ module.exports = function mountEvents(app, { notify, members }) {
   app.get('/api/admin/events/:id', (req, res) => {
     const e = getEvent(req.params.id);
     if (!e) return fail(res, 404, 'Event not found.');
-    const votes = db.prepare(`SELECT v.going, v.voted_at, m.* FROM event_votes v JOIN members m ON m.id = v.member_id
+    const votes = db.prepare(`SELECT v.going, v.voted_at, v.admin_out, v.note, m.* FROM event_votes v JOIN members m ON m.id = v.member_id
       WHERE v.event_id = ? ORDER BY m.gender DESC, m.name`).all(e.id);
     const voted = new Set(votes.map((v) => v.id));
-    const silent = db.prepare('SELECT * FROM members WHERE approved = 1 ORDER BY name').all().filter((m) => !voted.has(m.id));
+    const silent = db.prepare('SELECT * FROM members ORDER BY name').all().filter((m) => !voted.has(m.id));
     const choices = db.prepare(`SELECT c.member_id, c.kind, c.title, c.album FROM event_choices c WHERE c.event_id = ? ORDER BY c.member_id, c.kind, c.sort, c.id`).all(e.id);
     res.json({
       event: e,
-      votes: votes.map((v) => ({ ...memberLite(v), going: !!v.going, voted_at: v.voted_at })),
+      votes: votes.map((v) => ({ ...memberLite(v), going: !!v.going, voted_at: v.voted_at, admin_out: !!v.admin_out, note: v.note })),
       silent: silent.map(memberLite),
       choices,
       lineup: lineup(e.id),
@@ -197,9 +205,12 @@ module.exports = function mountEvents(app, { notify, members }) {
   app.put('/api/admin/events/:id/votes/:memberId', (req, res) => {
     const e = getEvent(req.params.id);
     if (!e) return fail(res, 404, 'Event not found.');
-    if (req.body.going === null) db.prepare('DELETE FROM event_votes WHERE event_id = ? AND member_id = ?').run(e.id, req.params.memberId);
-    else db.prepare(`INSERT INTO event_votes (event_id, member_id, going) VALUES (?,?,?)
-      ON CONFLICT(event_id, member_id) DO UPDATE SET going = excluded.going`).run(e.id, req.params.memberId, req.body.going ? 1 : 0);
+    // Taking a singer out records the studio's message (shown to the singer) and stops them re-joining this week.
+    const going = req.body.going ? 1 : 0, out = going ? 0 : req.body.admin_out ? 1 : 0;
+    db.prepare(`INSERT INTO event_votes (event_id, member_id, going, admin_out, note) VALUES (?,?,?,?,?)
+      ON CONFLICT(event_id, member_id) DO UPDATE SET going = excluded.going, admin_out = excluded.admin_out, note = excluded.note`)
+      .run(e.id, req.params.memberId, going, out, out ? clean(req.body.note, 300) || null : null);
+    if (out) db.prepare('DELETE FROM event_pairs WHERE event_id = ? AND (male_id = ? OR female_id = ?)').run(e.id, req.params.memberId, req.params.memberId);
     res.json({ ok: true });
   });
 
@@ -289,7 +300,7 @@ module.exports = function mountEvents(app, { notify, members }) {
     const ins = db.prepare('INSERT INTO member_songs (member_id, sung_on, title, album, event_id) VALUES (?,?,?,?,?)');
     const singers = new Set();
     for (const r of rows) for (const id of [r.male_id, r.female_id]) if (id) { ins.run(id, e.event_date, r.title, r.album, e.id); singers.add(id); }
-    db.prepare('UPDATE events SET done = 1, voting_open = 0, songs_open = 0 WHERE id = ?').run(e.id);
+    db.prepare('UPDATE events SET done = 1, voting_open = 0 WHERE id = ?').run(e.id);
     db.exec('COMMIT');
     const upgraded = [];
     if (e.event_date.slice(0, 7) === today().slice(0, 7)) {

@@ -184,6 +184,12 @@ if (!memberCols.includes('approved')) db.exec('ALTER TABLE members ADD COLUMN ap
 const songCols = db.prepare('PRAGMA table_info(member_songs)').all().map((c) => c.name);
 // Songs added automatically from a weekly event (so finishing it again replaces them).
 if (!songCols.includes('event_id')) db.exec('ALTER TABLE member_songs ADD COLUMN event_id INTEGER');
+const voteCols = db.prepare('PRAGMA table_info(event_votes)').all().map((c) => c.name);
+// Admin took the singer out of the week, with a message shown to them.
+if (!voteCols.includes('admin_out')) db.exec('ALTER TABLE event_votes ADD COLUMN admin_out INTEGER NOT NULL DEFAULT 0');
+if (!voteCols.includes('note')) db.exec('ALTER TABLE event_votes ADD COLUMN note TEXT');
+// No approval step any more: singers who joined through an event link are regular members.
+db.exec('UPDATE members SET approved = 1 WHERE approved = 0');
 
 // Migrations for databases created before a column existed.
 const galleryCols = db.prepare('PRAGMA table_info(gallery)').all().map((c) => c.name);

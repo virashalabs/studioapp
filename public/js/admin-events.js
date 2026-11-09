@@ -147,8 +147,7 @@ LOADERS.members = async () => { await _loadMembers(); await loadReminders(); };
 let eventsData = null;
 const evStatus = (e) => e.done ? '<span class="pill approved">✔ Done</span>'
   : e.published ? '<span class="pill paid">📋 Line-up published</span>'
-    : e.songs_open ? '<span class="pill pending">🎵 Taking songs</span>'
-      : e.voting_open ? '<span class="pill pending">🗳 Voting open</span>' : '<span class="pill unpaid">Paused</span>';
+    : e.voting_open ? '<span class="pill pending">🎤 Open for singers</span>' : '<span class="pill unpaid">Closed</span>';
 const fmtEvDay = (d) => App.fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
 async function loadEvents() {
@@ -224,8 +223,8 @@ function tabShare() {
   const e = ev.event, link = siteUrl(`event.html?id=${e.id}`);
   const when = [fmtEvDay(e.event_date), e.event_time, e.venue].filter(Boolean).join(' · ');
   const msgs = {
-    vote: `🎤 *${e.title}*\n${when}\n\nAre you singing this week? Tap to vote:\n${link}`,
-    songs: `🎵 Song choices are open for *${e.title}* (${fmtEvDay(e.event_date)}).\nAdd your solo and duet songs here:\n${link}`,
+    vote: `🎤 *${e.title}*\n${when}\n\nSinging this week? Tap the link, press *I'm in* and add your songs:\n${link}`,
+    songs: `⏰ Reminder: *${e.title}* (${fmtEvDay(e.event_date)}) – if you're singing, tap I'm in and add your songs:\n${link}`,
     lineup: `📋 The line-up for *${e.title}* is ready! Check your songs and partners:\n${link}`,
     video: `🎬 Videos from *${e.title}* (${fmtEvDay(e.event_date)}) are up – open the event page to watch:\n${link}`,
   };
@@ -233,12 +232,11 @@ function tabShare() {
   return `<div class="ev-grid">
     <div>
       <h4>Steps</h4>
-      ${sw('voting_open', '1 · Voting open', 'Singers say I\'m in / Not this week')}
-      ${sw('songs_open', '2 · Song choices open', 'Singers who are in add solo and duet songs')}
-      ${sw('published', '3 · Line-up published', 'Each singer sees only their own songs')}
+      ${sw('voting_open', '1 · Open for singers', 'Singers tap I\'m in and add their solo + duet songs on one page. Untick to close entries.')}
+      ${sw('published', '2 · Line-up published', 'Each singer sees only their own songs')}
       <div class="ev-finish">${e.done
         ? `<span class="pill approved">✔ Finished – ${ev.lineup.length} line-up songs added to the singers' monthly counts</span> <button type="button" class="btn btn-ghost btn-sm" data-act="finish">Count again</button>`
-        : `<button type="button" class="btn btn-dark" data-act="finish">4 · Finish week &amp; count songs</button><br><small class="muted">After the evening: adds every line-up song to the singers' records (a duet counts for both). Plans move up automatically if a singer passes their limit.</small>`}</div>
+        : `<button type="button" class="btn btn-dark" data-act="finish">3 · Finish week &amp; count songs</button><br><small class="muted">After the evening: adds every line-up song to the singers' records (a duet counts for both). Plans move up automatically if a singer passes their limit.</small>`}</div>
       <h4 style="margin-top:20px">🎬 Video link (Google Drive)</h4>
       <div style="display:flex;gap:8px"><input id="evVideo" type="url" placeholder="https://drive.google.com/…" value="${esc(e.video_link || '')}" style="flex:1;min-width:0">
         <button type="button" class="btn btn-primary btn-sm" data-act="video">Save</button></div>
@@ -248,8 +246,8 @@ function tabShare() {
       <h4>Share in the WhatsApp group</h4>
       <div style="display:flex;gap:8px;margin-bottom:10px"><input readonly value="${esc(link)}" style="flex:1;min-width:0" id="evLink"><button type="button" class="btn btn-ghost btn-sm" data-act="copy">Copy</button></div>
       <div class="ev-share">
-        <a class="btn btn-green btn-sm" target="_blank" rel="noopener" href="${waShare(msgs.vote)}">📣 Ask to vote</a>
-        <a class="btn btn-green btn-sm" target="_blank" rel="noopener" href="${waShare(msgs.songs)}">🎵 Songs open</a>
+        <a class="btn btn-green btn-sm" target="_blank" rel="noopener" href="${waShare(msgs.vote)}">📣 Invite singers</a>
+        <a class="btn btn-green btn-sm" target="_blank" rel="noopener" href="${waShare(msgs.songs)}">⏰ Reminder</a>
         <a class="btn btn-green btn-sm" target="_blank" rel="noopener" href="${waShare(msgs.lineup)}">📋 Line-up ready</a>
         ${e.video_link ? `<a class="btn btn-green btn-sm" target="_blank" rel="noopener" href="${waShare(msgs.video)}">🎬 Videos up</a>` : ''}
       </div>
@@ -264,16 +262,14 @@ function tabShare() {
 function tabVotes() {
   const e = ev.event, link = siteUrl(`event.html?id=${e.id}`);
   const ins = ev.votes.filter((v) => v.going), outs = ev.votes.filter((v) => !v.going);
-  const person = (m, btns) => `<li><span><b>${esc(m.name)}</b> <small class="muted">${m.gender === 'Female' ? '♀' : '♂'} ${esc(m.member_no)} · ${esc(m.phone)}</small>${m.approved ? '' : ' <span class="pill pending">🆕 New singer</span>'}</span><span class="actions">${m.approved ? '' : `<button type="button" class="btn btn-green btn-sm" data-approve="${m.id}">Approve</button>`}${btns}</span></li>`;
+  const person = (m, btns) => `<li><span><b>${esc(m.name)}</b> <small class="muted">${m.gender === 'Female' ? '♀' : '♂'} ${esc(m.member_no)} · ${esc(m.phone)}</small>${m.admin_out ? `<br><small class="muted">Taken out by studio${m.note ? `: “${esc(m.note)}”` : ''}</small>` : ''}</span><span class="actions">${btns}</span></li>`;
   const remind = (m) => `<a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="${waLink(m.phone, `Hi ${firstName(m.name)}, are you singing at ${e.title} (${fmtEvDay(e.event_date)})? Please vote here: ${link}`)}">💬 Remind</a>`;
   const col = (title, list, btns, empty) => `<div><h4>${title} <small class="muted">${list.length}</small></h4>${list.length ? `<ul class="ev-people">${list.map((m) => person(m, btns(m))).join('')}</ul>` : `<p class="muted">${empty}</p>`}</div>`;
   const byG = (g) => ins.filter((v) => v.gender === g).length;
-  const fresh = ev.votes.filter((v) => !v.approved);
-  return `${fresh.length ? `<div class="alert alert-warn" style="margin:0 0 12px">🆕 ${fresh.length} new singer${fresh.length === 1 ? '' : 's'} joined through the link: ${fresh.map((m) => esc(m.name)).join(', ')}. Approve to add them to your members (their PIN is the last 4 digits of their phone).</div>` : ''}
-    <p class="muted" style="margin-top:0">${ins.length} in (${byG('Male')} male, ${byG('Female')} female) · ${outs.length} not coming · ${ev.silent.length} haven't answered. You can set an answer yourself for singers who replied on WhatsApp.</p>
+  return `<p class="muted" style="margin-top:0">${ins.length} in (${byG('Male')} male, ${byG('Female')} female) · ${outs.length} not coming · ${ev.silent.length} haven't answered. New singers who use the link join your members automatically. "Take out" removes a singer from this week with a message they'll see.</p>
     <div class="ev-grid three">
-      ${col('🎤 In', ins, (m) => `<button type="button" class="btn btn-ghost btn-sm" data-vote="${m.id}" data-going="0">Mark out</button>`, 'Nobody yet.')}
-      ${col('🙅 Not coming', outs, (m) => `<button type="button" class="btn btn-ghost btn-sm" data-vote="${m.id}" data-going="1">Mark in</button>`, 'Nobody.')}
+      ${col('🎤 In', ins, (m) => `<button type="button" class="btn btn-ghost btn-sm" data-takeout="${m.id}" style="color:var(--red)">Take out</button>`, 'Nobody yet.')}
+      ${col('🙅 Out', outs, (m) => `<button type="button" class="btn btn-ghost btn-sm" data-vote="${m.id}" data-going="1">Put back in</button>`, 'Nobody.')}
       ${col('… No answer', ev.silent, (m) => `${remind(m)}<button type="button" class="btn btn-ghost btn-sm" data-vote="${m.id}" data-going="1">In</button><button type="button" class="btn btn-ghost btn-sm" data-vote="${m.id}" data-going="0">Out</button>`, 'Everyone has answered.')}
     </div>`;
 }
@@ -285,7 +281,7 @@ function tabSongs() {
   const ins = ev.votes.filter((v) => v.going);
   const list = (id, kind) => ev.choices.filter((c) => c.member_id === id && c.kind === kind);
   const fmt = (arr) => (arr.length ? `<ol class="ev-mini">${arr.map((c) => `<li>${esc(c.title)}${c.album ? ` <small class="muted">${esc(c.album)}</small>` : ''}</li>`).join('')}</ol>` : '<span class="muted">–</span>');
-  return `<div class="card-head" style="margin-bottom:8px"><p class="muted" style="margin:0">${ev.event.songs_open ? 'Song choices are open – singers add them on the event page.' : 'Song choices are closed. Turn on step 2 in Details to let singers add songs.'}</p>
+  return `<div class="card-head" style="margin-bottom:8px"><p class="muted" style="margin:0">${ev.event.voting_open ? 'Singers add their songs on the event page when they tap I\'m in.' : 'Entries are closed – you can still edit or upload choices here.'}</p>
       <div class="actions"><button type="button" class="btn btn-ghost btn-sm" data-act="ch-template">⬇ Template</button><button type="button" class="btn btn-ghost btn-sm" data-act="ch-upload">⬆ Upload Excel</button><button type="button" class="btn btn-ghost btn-sm" data-act="ch-download">⬇ Download Excel</button></div></div>
     ${ins.length ? `<table class="data"><thead><tr><th>Singer</th><th>Solo</th><th>Duet</th><th></th></tr></thead><tbody>
       ${ins.map((m) => `<tr><td><b>${esc(m.name)}</b><br><small class="muted">${m.gender} · ${esc(m.member_no)}</small></td><td>${fmt(list(m.id, 'solo'))}</td><td>${fmt(list(m.id, 'duet'))}</td>
@@ -389,12 +385,7 @@ async function onEventClick(e) {
       return refresh();
     }
     if (t.dataset.editch) return editChoices(Number(t.dataset.editch));
-    if (t.dataset.approve) {
-      await App.api(`api/admin/members/${t.dataset.approve}/approve`, { method: 'POST' });
-      App.toast('Singer approved – now in your members list', 'ok');
-      refreshCounts();
-      return refresh();
-    }
+    if (t.dataset.takeout) return takeOut(ev.votes.find((v) => v.id === Number(t.dataset.takeout)));
     if (t.dataset.rmrow) { readDraft(); draft.rows.splice(Number(t.dataset.rmrow), 1); return openEvent(id); }
     switch (t.dataset.act) {
       case 'copy': navigator.clipboard.writeText($('evLink').value).then(() => App.toast('Link copied', 'ok')); return undefined;
@@ -455,6 +446,25 @@ async function onEventClick(e) {
       default: return undefined;
     }
   } catch (err) { App.toast(err.message, 'error'); }
+}
+
+// Take a singer out of this week with a message; WhatsApp opens so the singer hears it directly too.
+function takeOut(m) {
+  const e = ev.event;
+  const { el } = modal(`Take ${esc(m.name)} out of this week`, `
+    <p style="margin-top:0">${esc(m.name)} will be removed from <b>${esc(e.title)}</b> (and from any line-up rows) and can't re-join this week. They'll see your message on the event page.</p>
+    <div class="field"><label>Message to ${esc(firstName(m.name))}</label>
+      <textarea name="note" maxlength="300" style="min-height:90px" placeholder="e.g. Sorry, we're full this week – see you next Sunday!"></textarea></div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" name="wa" value="1" checked> Also open WhatsApp to send this message</label>`,
+  { submitText: 'Take out', onSubmit: async (f) => {
+    await App.api(`api/admin/events/${e.id}/votes/${m.id}`, { method: 'PUT', body: { going: false, admin_out: true, note: f.note } });
+    const msg = `Hi ${firstName(m.name)}, about ${e.title} (${fmtEvDay(e.event_date)}): ${f.note || "you've been taken off this week's list."}\n\n– Rhythm Rehearsal Studio`;
+    if (f.wa) window.open(waLink(m.phone, msg), '_blank', 'noopener');
+    App.toast(`${m.name} taken out of this week`, 'ok');
+    draft = null;
+    await refresh();
+  } });
+  el.querySelector('textarea').focus();
 }
 
 function editChoices(memberId) {

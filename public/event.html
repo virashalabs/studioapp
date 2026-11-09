@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script>try{document.documentElement.dataset.theme=localStorage.getItem("sb-theme")||"dark"}catch(e){document.documentElement.dataset.theme="dark"}</script>
   <title>Weekly Event</title>
-  <meta name="description" content="This week's singing event: say if you're coming, send your solo and duet songs, and see your line-up.">
+  <meta name="description" content="This week's singing event: tap I'm in, add your songs and see your line-up.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="img/favicon-32.png">
@@ -15,56 +15,74 @@
 <body>
   <header id="site-header"></header>
 
-  <section class="page-hero">
-    <div class="wrap">
-      <h1 id="evTitle">Weekly Event</h1>
-      <p id="evWhen">Loading…</p>
-    </div>
-  </section>
-
-  <main class="section">
-    <div class="wrap ev-layout">
-      <div>
-        <!-- Step 1: vote -->
-        <div class="panel ev-step" id="voteStep">
-          <div class="ev-step-head"><span class="ev-num">1</span><h3>Are you singing this week?</h3></div>
-          <p class="muted" id="evNotes" style="white-space:pre-line"></p>
-          <div id="voteBody"></div>
-        </div>
-
-        <!-- Step 2: songs -->
-        <form class="panel ev-step" id="songStep" novalidate>
-          <div class="ev-step-head"><span class="ev-num">2</span><h3>Your song choices</h3></div>
-          <div id="songBody"></div>
-        </form>
-
-        <!-- Step 3: line-up -->
-        <div class="panel ev-step" id="lineupStep">
-          <div class="ev-step-head"><span class="ev-num">3</span><h3>Your line-up</h3></div>
-          <div id="lineupBody"></div>
-        </div>
+  <main class="ev-page">
+    <div class="ev-wrap">
+      <div class="ev-head">
+        <h1 id="evTitle">Weekly Event</h1>
+        <p id="evWhen">Loading…</p>
+        <p id="evNotes" class="ev-notes" hidden></p>
       </div>
 
-      <aside>
-        <div class="panel" id="videoPanel" hidden>
-          <h3>🎬 This week's video</h3>
-          <p class="muted" style="font-size:14px">Recordings of the evening, shared on Google Drive.</p>
-          <a class="btn btn-primary btn-block" id="videoLink" target="_blank" rel="noopener">Open videos ↗</a>
+      <!-- Line-up (when published) -->
+      <section class="ev-card" id="lineupCard" hidden>
+        <h2>🎵 Your songs this week</h2>
+        <div id="lineupBody"></div>
+      </section>
+
+      <!-- Join + songs: one form -->
+      <form class="ev-card" id="joinForm" novalidate hidden>
+        <div id="who"></div>
+        <div id="joinError" class="alert alert-error hidden"></div>
+
+        <div id="idFields">
+          <label class="ev-label" for="vPhone">Your mobile number</label>
+          <input class="ev-input" id="vPhone" name="phone" type="tel" inputmode="tel" placeholder="98400 11223" autocomplete="tel">
+          <div id="pinRow" class="hidden">
+            <label class="ev-label" for="vPin">PIN <small>(first PIN = last 4 digits of your phone)</small></label>
+            <input class="ev-input" id="vPin" name="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password">
+          </div>
+          <div id="newRow" class="hidden">
+            <label class="ev-label" for="vName">Your name</label>
+            <input class="ev-input" id="vName" name="name" maxlength="80" autocomplete="name">
+            <div class="ev-gender" role="radiogroup" aria-label="You sing as">
+              <label><input type="radio" name="gender" value="Male"> 👨 Male</label>
+              <label><input type="radio" name="gender" value="Female"> 👩 Female</label>
+            </div>
+          </div>
         </div>
-        <div class="panel">
-          <h3>How it works</h3>
-          <ol class="ev-how">
-            <li>Tap <b>I'm in</b> when the event is posted.</li>
-            <li>When song choices open, add your <b>solo</b> and <b>duet</b> songs.</li>
-            <li>The studio pairs the duets and publishes the line-up – you'll see only your own songs here.</li>
-            <li>After the evening, the video link appears on this page.</li>
-          </ol>
+
+        <div class="ev-choice" role="radiogroup" aria-label="Are you singing this week?">
+          <label><input type="radio" name="going" value="1"> <span>🎤 I'm in</span></label>
+          <label><input type="radio" name="going" value="0"> <span>Not this week</span></label>
         </div>
-        <div class="panel" id="pastPanel" hidden>
-          <h3>Your recent weeks</h3>
-          <div id="pastList"></div>
+
+        <div id="songsBox" class="hidden">
+          <div class="ev-songs">
+            <h3>🎙️ Solo songs</h3>
+            <div id="soloRows"></div>
+            <button type="button" class="ev-add" data-add="solo">+ Add solo song</button>
+          </div>
+          <div class="ev-songs">
+            <h3>🎶 Duet songs</h3>
+            <div id="duetRows"></div>
+            <button type="button" class="ev-add" data-add="duet">+ Add duet song</button>
+          </div>
         </div>
-      </aside>
+
+        <div class="ev-submit"><button class="btn btn-primary btn-lg btn-block" id="submitBtn">Submit</button></div>
+      </form>
+
+      <section class="ev-card" id="closedCard" hidden></section>
+
+      <section class="ev-card" id="videoCard" hidden>
+        <h2>🎬 Videos</h2>
+        <a class="btn btn-primary btn-block" id="videoLink" target="_blank" rel="noopener">Open this week's videos ↗</a>
+      </section>
+
+      <section class="ev-card" id="pastCard" hidden>
+        <h2>Your recent weeks</h2>
+        <div id="pastList"></div>
+      </section>
     </div>
   </main>
 
