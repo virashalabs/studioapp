@@ -823,9 +823,9 @@ a.slide { display: block; }
 
 /* Member page: UPI payment and monthly report */
 .pay-box { display: grid; grid-template-columns: 150px 1fr; gap: 16px; margin-top: 14px; align-items: start; }
-.pay-qr { width: 100%; height: auto; border-radius: 10px; background: #fff; }
+.pay-qr { width: 100%; max-width: 200px; padding: 6px; height: auto; border-radius: 10px; background: #fff; }
 .pay-box input { border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; font: inherit; background: var(--card); color: var(--ink); }
-@media (max-width: 480px) { .pay-box { grid-template-columns: 1fr; } .pay-qr { max-width: 240px; margin: 0 auto; } }
+@media (max-width: 480px) { .pay-box { grid-template-columns: 1fr; } .pay-qr { max-width: 190px; margin: 0 auto; } }
 .event-cta { display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; font-size: 15px; border-left: 4px solid #ffd23f; }
 .event-cta > span:first-child { flex: 1; }
 .event-cta:hover { box-shadow: var(--shadow-lg); }

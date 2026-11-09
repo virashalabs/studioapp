@@ -244,7 +244,7 @@ function upiLink(m) {
 // QR always visible; on a phone the buttons open GPay / any UPI app with the amount filled in.
 function payBlock(m, amount) {
   const u = upiLink(m);
-  return `<div class="app-qr"><img src="img/upi-qr.png" alt="UPI QR code for Rhythm Rehearsal Studio" width="520" height="790"><small>UPI ID: <b>${esc(u.pa)}</b></small></div>
+  return `<div class="app-qr"><img src="img/upi-qr-code.png" alt="UPI QR code for Rhythm Rehearsal Studio" width="436" height="436"><small>UPI ID: <b>${esc(u.pa)}</b></small></div>
     ${u.mobile ? `<a class="btn btn-gpay btn-lg btn-block" href="${u.gpay}" data-gpay="${u.any}">Pay ${money(amount)} with <b>GPay</b></a>
       <a class="btn btn-outline btn-block" href="${u.any}">Other UPI app (PhonePe, Paytm…)</a>`
       : '<p class="muted app-small" style="text-align:center;margin:0">Scan the QR with GPay or any UPI app on your phone.</p>'}`;

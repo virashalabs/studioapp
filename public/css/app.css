@@ -129,5 +129,5 @@ body.embedded #site-header, body.embedded #site-footer { display: none; }
 .app-howpay summary { cursor: pointer; color: var(--accent); margin-top: 6px; }
 .app-howpay .pay-qr { max-width: 220px; margin-top: 8px; border-radius: 12px; }
 .app-qr { background: #fff; border-radius: 16px; padding: 12px; text-align: center; color: #333; }
-.app-qr img { max-width: 260px; width: 100%; margin: 0 auto 6px; border-radius: 8px; }
+.app-qr img { height: auto; aspect-ratio: 1; max-width: 190px; width: 100%; margin: 0 auto 6px; border-radius: 8px; }
 .app-qr small { font-size: 13px; }
