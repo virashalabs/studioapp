@@ -131,3 +131,42 @@ body.embedded #site-header, body.embedded #site-footer { display: none; }
 .app-qr { background: #fff; border-radius: 16px; padding: 12px; text-align: center; color: #333; }
 .app-qr img { height: auto; aspect-ratio: 1; max-width: 190px; width: 100%; margin: 0 auto 6px; border-radius: 8px; }
 .app-qr small { font-size: 13px; }
+
+/* Admin app */
+.app-count { margin-left: auto; font-style: normal; background: var(--accent); color: #fff; border-radius: 999px; font-size: 12px; padding: 1px 8px; }
+.app-count:empty { display: none; }
+.app-stats-4 { grid-template-columns: 1fr 1fr; }
+.app-stats a { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, var(--card)), var(--card)); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; }
+.app-stats a small { color: var(--ink-2); }
+.app-stats a b { font-size: 34px; line-height: 1.1; }
+.app-stats a span { color: var(--muted); font-size: 13px; }
+.app-item { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
+.app-card h3 + .app-item, .app-card-head + .app-item, .app-item:first-child { border-top: 0; }
+.app-item > div:first-child { flex: 1; min-width: 0; }
+.app-item small { display: block; color: var(--muted); font-size: 13px; }
+.app-item small.bad, .bad { color: var(--red); }
+.ok { color: var(--green); }
+.app-item-btn { width: 100%; background: none; border: 0; border-top: 1px solid var(--line); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.app-section-btn:first-child { border-top: 0; }
+.app-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.app-booking { padding: 12px 0; border-top: 1px solid var(--line); }
+.app-booking:first-child { border-top: 0; padding-top: 0; }
+.app-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.app-search { margin: 0; }
+.app-switch { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer; }
+.app-switch input { width: 22px; height: 22px; accent-color: var(--accent); flex: none; }
+.app-switch b, .app-switch small { display: block; }
+.app-switch small { color: var(--muted); font-size: 13px; }
+.app-check { display: flex; gap: 8px; align-items: center; margin-top: 12px; font-size: 14px; }
+.app-lu { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+.app-lu .ev-input { margin: 0; }
+.app-lu-head { display: flex; justify-content: space-between; align-items: center; }
+.app-sticky { position: sticky; bottom: 0; display: grid; grid-template-columns: 1fr 2fr; gap: 8px; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); background: var(--bg); }
+.app-sheet-bg { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .55); display: flex; align-items: flex-end; justify-content: center; }
+.app-sheet { background: var(--card); width: 100%; max-width: 560px; max-height: 88dvh; overflow-y: auto; border-radius: 20px 20px 0 0; padding: 16px 16px calc(18px + env(safe-area-inset-bottom)); animation: sheetUp .2s ease; }
+@keyframes sheetUp { from { transform: translateY(40px); opacity: 0; } }
+.app-sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.app-sheet-head h3 { margin: 0; font-size: 18px; }
+.app-sheet-head button { background: none; border: 0; color: var(--ink); font-size: 28px; cursor: pointer; line-height: 1; }
+.app-sheet textarea.ev-input { min-height: 90px; }
+.app-evform .ev-input { margin-bottom: 0; }

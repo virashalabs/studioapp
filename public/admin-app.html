@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem("sb-theme")||"dark"}catch(e){}</script>
+  <title>Studio Admin</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0d0f15">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Studio Admin">
+  <link rel="manifest" href="admin-manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="img/favicon-32.png">
+  <link rel="apple-touch-icon" href="img/admin-app-192.png">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="app-body">
+
+  <main id="loginScreen" class="app-login hidden">
+    <div class="app-login-top">
+      <img src="img/admin-app-192.png" alt="" width="84" height="84" class="app-login-logo">
+      <h1>Studio Admin</h1>
+      <p>Rhythm Rehearsal Studio – staff only</p>
+    </div>
+    <form class="app-card" id="loginForm" novalidate>
+      <h2>Admin login</h2>
+      <div id="loginError" class="alert alert-error hidden"></div>
+      <label class="ev-label" for="aUser">Username</label>
+      <input class="ev-input" id="aUser" name="username" autocomplete="username" autocapitalize="none" spellcheck="false">
+      <label class="ev-label" for="aPw">Password</label>
+      <input class="ev-input" id="aPw" name="password" type="password" autocomplete="current-password">
+      <button class="btn btn-primary btn-lg btn-block" style="margin-top:16px">Log in</button>
+    </form>
+    <div class="app-admin-section"><small>Singer?</small><a href="app.html" class="btn btn-ghost btn-sm">🎤 Singer app</a></div>
+  </main>
+
+  <div id="shell" class="hidden">
+    <header class="app-bar">
+      <button type="button" class="app-icon-btn" id="menuBtn" aria-label="Open menu" aria-controls="drawer" aria-expanded="false">☰</button>
+      <h1 id="viewTitle">Dashboard</h1>
+      <button type="button" class="app-icon-btn" id="reloadBtn" aria-label="Refresh">⟳</button>
+    </header>
+
+    <nav class="app-drawer" id="drawer" aria-label="Menu">
+      <div class="app-drawer-head">
+        <img src="img/admin-app-192.png" alt="" width="44" height="44">
+        <div><b>Studio Admin</b><small>Rhythm Rehearsal Studio</small></div>
+      </div>
+      <a href="#home" data-nav="home"><span>📊</span>Dashboard</a>
+      <a href="#event" data-nav="event"><span>🎤</span>Weekly event</a>
+      <a href="#fees" data-nav="fees"><span>💰</span>Fees &amp; payments <em class="app-count" id="feeCount"></em></a>
+      <a href="#members" data-nav="members"><span>👥</span>Singers</a>
+      <a href="#bookings" data-nav="bookings"><span>📅</span>Bookings <em class="app-count" id="bookCount"></em></a>
+      <a href="#full" data-nav="full"><span>🧰</span>All admin tools</a>
+      <hr>
+      <button type="button" class="app-drawer-btn hidden" data-install><span>📲</span>Add to home screen</button>
+      <button type="button" class="app-drawer-btn" id="themeBtn"><span>🌓</span>Light / dark</button>
+      <button type="button" class="app-drawer-btn" id="logoutBtn"><span>🚪</span>Log out</button>
+      <div class="app-drawer-foot"><a href="app.html">Singer app</a> · <a href="./">Website</a></div>
+    </nav>
+    <div class="app-scrim" id="scrim" hidden></div>
+
+    <main class="app-main" id="view"></main>
+    <iframe class="app-frame hidden" id="frame" title="Admin tools"></iframe>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script src="js/admin-app.js"></script>
+</body>
+</html>

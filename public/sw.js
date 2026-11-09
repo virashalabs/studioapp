@@ -1,7 +1,7 @@
 // Service worker for the installable singer app. Always tries the network first (data must be live);
 // the cached copy is only a fallback so the app still opens with a friendly message when offline.
-const CACHE = 'rrs-app-v1';
-const SHELL = ['app.html', 'css/style.css', 'css/app.css', 'js/common.js', 'js/app.js', 'img/app-192.png', 'img/logo-mark.png'];
+const CACHE = 'rrs-app-v2';
+const SHELL = ['app.html', 'css/style.css', 'css/app.css', 'js/common.js', 'js/app.js', 'admin-app.html', 'js/admin-app.js', 'img/app-192.png', 'img/logo-mark.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
