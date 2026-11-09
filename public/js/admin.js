@@ -65,12 +65,25 @@ async function boot() {
   $('pw').required = !demo;
   $('user').required = !demo;
   $('loginBtn').textContent = demo ? 'Proceed to Admin Dashboard →' : 'Log in';
+  // Demo: the admin needs no password, but the superadmin still signs in with username + password.
+  $('superLink').classList.toggle('hidden', !demo);
+  $('forgotWrap').classList.toggle('hidden', demo);
   $('demoPill').classList.toggle('hidden', !demo);
   $('demoBanner').classList.toggle('hidden', !demo);
   $('login').classList.toggle('hidden', admin);
   $('app').classList.toggle('hidden', !admin);
   if (admin) startApp();
 }
+
+$('superLink').addEventListener('click', (e) => {
+  e.preventDefault();
+  $('pwField').classList.remove('hidden');
+  $('demoNote').classList.add('hidden');
+  $('user').required = true; $('pw').required = true;
+  $('user').value = 'superadmin';
+  $('loginBtn').textContent = 'Log in as superadmin';
+  $('pw').focus();
+});
 
 $('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
