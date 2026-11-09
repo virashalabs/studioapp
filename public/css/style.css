@@ -780,3 +780,13 @@ a.slide { display: block; }
 .demo-hint code { font-weight: 700; color: var(--ink); }
 .readonly-val { padding: 10px 12px; border: 1px dashed var(--line); border-radius: 6px; color: var(--ink-2); font-size: 14px; }
 @media (max-width: 900px) { .member-layout { grid-template-columns: 1fr; } }
+
+/* Show/hide password button */
+.pw-wrap { position: relative; display: block; }
+.pw-wrap input { width: 100%; padding-right: 44px; }
+.pw-eye {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px;
+  display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer;
+}
+.pw-eye:hover, .pw-eye[aria-pressed="true"] { color: var(--accent); }
+.pw-eye:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
