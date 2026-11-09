@@ -56,6 +56,7 @@
       <header class="topbar">
         <button class="burger" id="burger" aria-label="Menu">☰</button>
         <h1 id="viewTitle">Dashboard</h1>
+        <span class="pill hidden" id="superBadge" style="background:var(--accent);color:#fff">🛡️ Superadmin</span>
         <span class="pill demo-pill hidden" id="demoPill" title="Password sign-in is switched off for this demo. The live site is password-protected for studio staff only.">🧪 Demo preview</span>
         <span class="spacer"></span>
         <a href="admin-app.html" class="btn btn-primary btn-sm admin-app-link" title="Phone app for daily admin jobs – open on your phone and add to home screen">📱 Admin app</a>
@@ -296,6 +297,22 @@
             <p class="muted" style="font-size:13px;margin:10px 0 0">At least 6 characters. Login username is <b>admin</b> (capitals don't matter).</p>
             <button class="btn btn-dark" style="margin-top:14px">Update password</button>
           </form>
+          <div class="card hidden" id="superCard" style="max-width:520px;border-color:var(--accent)">
+            <h3>🛡️ Superadmin</h3>
+            <form id="resetAdminForm">
+              <p class="muted" style="font-size:13px;margin-top:0">Set a new password for the studio <b>admin</b> login – no current password needed.</p>
+              <div class="field"><label>New admin password</label><input name="next" type="password" required minlength="6" autocomplete="new-password"></div>
+              <button class="btn btn-primary" style="margin-top:12px">Set admin password</button>
+            </form>
+            <form id="superPwForm" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--line)">
+              <p class="muted" style="font-size:13px;margin-top:0">Change your own superadmin password.</p>
+              <div class="form-grid">
+                <div class="field"><label>Current superadmin password</label><input name="current" type="password" required autocomplete="current-password"></div>
+                <div class="field"><label>New superadmin password</label><input name="next" type="password" required minlength="6" autocomplete="new-password"></div>
+              </div>
+              <button class="btn btn-dark" style="margin-top:12px">Update superadmin password</button>
+            </form>
+          </div>
         </section>
       </div>
     </div>

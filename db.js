@@ -280,6 +280,10 @@ function seed() {
   const insertSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
   for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) insertSetting.run(k, v);
 
+  // Superadmin (owner): username "superadmin" (not case sensitive). The password is never in the code:
+  // it comes from the SUPERADMIN_PASSWORD environment variable on first start, and can then be changed in Settings.
+  if (process.env.SUPERADMIN_PASSWORD) insertSetting.run('superadmin_password_hash', hashPassword(process.env.SUPERADMIN_PASSWORD));
+
   const hasPw = db.prepare("SELECT 1 FROM settings WHERE key = 'admin_password_hash'").get();
   if (!hasPw) {
     insertSetting.run('admin_password_hash', hashPassword(process.env.ADMIN_PASSWORD || 'admin123'));

@@ -121,14 +121,18 @@ function readCookie(req, name) {
   const m = (req.headers.cookie || '').split(';').map((c) => c.trim()).find((c) => c.startsWith(name + '='));
   return m ? decodeURIComponent(m.slice(name.length + 1)) : null;
 }
-function isAdmin(req) {
+// Admin cookie: "exp.sig" for the studio admin, "exp.super.sig" for the superadmin (same powers + can reset the admin password).
+function adminRole(req) {
   const token = readCookie(req, 'sb_admin');
-  if (!token) return false;
-  const [exp, sig] = token.split('.');
-  if (!exp || !sig || Number(exp) < Date.now()) return false;
-  const expected = sign(exp);
-  return sig.length === expected.length && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+  if (!token) return null;
+  const parts = token.split('.');
+  const exp = parts[0], sig = parts[parts.length - 1], role = parts.length === 3 ? parts[1] : 'admin';
+  if (!exp || !sig || Number(exp) < Date.now() || !['admin', 'super'].includes(role)) return null;
+  const expected = sign(role === 'super' ? `${exp}.super` : exp);
+  return sig.length === expected.length && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected)) ? role : null;
 }
+const isAdmin = (req) => !!adminRole(req);
+const isSuper = (req) => adminRole(req) === 'super';
 function requireAdmin(req, res, next) {
   if (!isAdmin(req)) return res.status(401).json({ error: 'Please log in as admin.' });
   next();
@@ -264,9 +268,11 @@ app.post('/api/admin/login', (req, res) => {
   const ip = req.ip || 'unknown', now = Date.now();
   const f = loginFails.get(ip);
   if (f && f.until > now) return res.status(429).json({ error: 'Too many wrong attempts. Please try again in 15 minutes.' });
-  // Username is not case sensitive ("Admin" = "admin").
-  const userOk = String(req.body.username || '').trim().toLowerCase() === String(s.admin_username || 'admin').toLowerCase();
-  if (!demo && !(userOk && verifyPassword(String(req.body.password || ''), s.admin_password_hash))) {
+  // Usernames are not case sensitive ("Admin" = "admin", "Superadmin" = "superadmin").
+  const user = String(req.body.username || '').trim().toLowerCase(), pw = String(req.body.password || '');
+  const superOk = user === 'superadmin' && !!s.superadmin_password_hash && verifyPassword(pw, s.superadmin_password_hash);
+  const userOk = user === String(s.admin_username || 'admin').toLowerCase();
+  if (!superOk && !demo && !(userOk && verifyPassword(pw, s.admin_password_hash))) {
     // Count failures within a 15-minute window that starts at the first one.
     const fresh = !f || now - f.since > 15 * 60 * 1000;
     const n = (fresh ? 0 : f.n) + 1;
@@ -275,7 +281,8 @@ app.post('/api/admin/login', (req, res) => {
   }
   loginFails.delete(ip);
   const exp = String(Date.now() + 1000 * 60 * 60 * 12);
-  res.setHeader('Set-Cookie', `sb_admin=${exp}.${sign(exp)}; HttpOnly; SameSite=Strict; Path=${COOKIE_PATH}; Max-Age=${60 * 60 * 12}`);
+  const tok = superOk ? `${exp}.super.${sign(`${exp}.super`)}` : `${exp}.${sign(exp)}`;
+  res.setHeader('Set-Cookie', `sb_admin=${tok}; HttpOnly; SameSite=Strict; Path=${COOKIE_PATH}; Max-Age=${60 * 60 * 12}`);
   res.json({ ok: true });
 });
 
@@ -284,7 +291,7 @@ app.post('/api/admin/logout', (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/admin/me', (req, res) => res.json({ admin: isAdmin(req), demo: getSettings().admin_demo_mode === '1' }));
+app.get('/api/admin/me', (req, res) => res.json({ admin: isAdmin(req), super: isSuper(req), demo: getSettings().admin_demo_mode === '1' }));
 
 app.use('/api/admin', requireAdmin);
 
@@ -518,7 +525,7 @@ app.delete('/api/admin/testimonials/:id', (req, res) => {
 
 // Settings
 app.get('/api/admin/settings', (req, res) => {
-  const { admin_password_hash, ...rest } = getSettings();
+  const { admin_password_hash, superadmin_password_hash, ...rest } = getSettings();
   res.json(rest);
 });
 app.put('/api/admin/settings', (req, res) => {
@@ -531,6 +538,21 @@ app.post('/api/admin/password', (req, res) => {
   if (!verifyPassword(String(req.body.current || ''), s.admin_password_hash)) return res.status(400).json({ error: 'Current password is incorrect.' });
   if (String(req.body.next || '').length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });
   setSetting('admin_password_hash', hashPassword(req.body.next));
+  res.json({ ok: true });
+});
+
+// Superadmin only: set a new admin password without knowing the old one, and change the superadmin's own password.
+app.post('/api/admin/reset-admin-password', (req, res) => {
+  if (!isSuper(req)) return res.status(403).json({ error: 'Only the superadmin can do this.' });
+  if (String(req.body.next || '').length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+  setSetting('admin_password_hash', hashPassword(String(req.body.next)));
+  res.json({ ok: true });
+});
+app.post('/api/admin/super-password', (req, res) => {
+  if (!isSuper(req)) return res.status(403).json({ error: 'Only the superadmin can do this.' });
+  if (!verifyPassword(String(req.body.current || ''), getSettings().superadmin_password_hash)) return res.status(400).json({ error: 'Current password is incorrect.' });
+  if (String(req.body.next || '').length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+  setSetting('superadmin_password_hash', hashPassword(String(req.body.next)));
   res.json({ ok: true });
 });
 

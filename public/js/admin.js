@@ -49,8 +49,11 @@ function modal(title, body, { submitText = 'Save', onSubmit, wide = false } = {}
 async function boot() {
   state.settings = await App.settings().catch(() => null);
   document.querySelectorAll('[data-s]').forEach((el) => { el.textContent = state.settings?.[el.dataset.s] || ''; });
-  const { admin, demo } = await App.api('api/admin/me');
+  const { admin, demo, super: sup } = await App.api('api/admin/me');
   state.demo = demo;
+  // Superadmin: everything the admin has, plus the password panel in Settings.
+  $('superCard').classList.toggle('hidden', !sup);
+  $('superBadge').classList.toggle('hidden', !sup);
   $('demoNote').classList.toggle('hidden', !demo);
   $('pwField').classList.toggle('hidden', demo);
   $('pw').required = !demo;
@@ -722,6 +725,23 @@ $('pwForm').addEventListener('submit', async (e) => {
     await App.api('api/admin/password', { method: 'POST', body: Object.fromEntries(new FormData(e.target)) });
     e.target.reset();
     App.toast('Password updated', 'ok');
+  } catch (err) { App.toast(err.message, 'error'); }
+});
+
+$('resetAdminForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await App.api('api/admin/reset-admin-password', { method: 'POST', body: Object.fromEntries(new FormData(e.target)) });
+    e.target.reset();
+    App.toast('Admin password changed', 'ok');
+  } catch (err) { App.toast(err.message, 'error'); }
+});
+$('superPwForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await App.api('api/admin/super-password', { method: 'POST', body: Object.fromEntries(new FormData(e.target)) });
+    e.target.reset();
+    App.toast('Superadmin password changed', 'ok');
   } catch (err) { App.toast(err.message, 'error'); }
 });
 
